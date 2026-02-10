@@ -1,11 +1,12 @@
 [project]
 name = "salesbench"
-description = "Your environment description here"
-tags = ["placeholder-tag", "train", "eval"]
+description = "Stateful, tool-use sales simulation environment for Prime Lab (verifiers)."
+tags = ["sales", "tool-use", "rl", "train", "eval"]
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = [
     "verifiers>=0.1.9.post3",
+    "datasets>=4.0.0",
 ]
 
 [build-system]
@@ -13,7 +14,20 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-include = ["salesbench.py", "pyproject.toml"] 
+include = [
+    "salesbench.py",
+    "catalog.py",
+    "config.py",
+    "dataset.py",
+    "generator.py",
+    "models.py",
+    "policy.py",
+    "rewards.py",
+    "runtime.py",
+    "tools.py",
+    "README.md",
+    "pyproject.toml",
+]
 
 [tool.verifiers.eval]
 num_examples = 5

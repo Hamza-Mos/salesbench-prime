@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from models import PlanType, RiskClass
+
 
 @dataclass(slots=True)
 class PlanSpec:

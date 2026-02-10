@@ -1,6 +1,20 @@
 
 # outputs from `prime eval run`
-./outputs
-./environments/*/outputs
+outputs/
+environments/*/outputs/
+
+# Python bytecode / caches
+**/__pycache__/
+**/*.pyc
+
+# Build artifacts from `prime env push` / `uv build`
+environments/*/dist/
+environments/*/dist/*
+
+# Prime CLI local metadata
+environments/*/.prime/
+environments/*/.prime/*
+
+.venv/
 
 .env

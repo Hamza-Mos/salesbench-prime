@@ -5,6 +5,8 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
+from models import Lead, RiskClass
+
 _FIRST_NAMES = [
     "Alex",
     "Jordan",

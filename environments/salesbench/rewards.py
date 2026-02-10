@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from runtime import SalesEpisodeRuntime
+
 
 def _get_runtime(state: dict[str, Any]) -> SalesEpisodeRuntime | None:
     runtime = state.get("runtime")

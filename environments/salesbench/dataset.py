@@ -1,0 +1,51 @@
+"""Dataset construction for the SalesBench Prime environment."""
+
+from __future__ import annotations
+
+from datasets import Dataset
+
+_SPLIT_OFFSETS: dict[str, int] = {
+    "train": 0,
+    "eval": 10_000,
+    "test": 20_000,
+}
+
+
+def build_salesbench_dataset(
+    *,
+    split: str,
+    num_examples: int,
+    base_seed: int,
+    base_num_leads: int,
+    work_days: int,
+    hours_per_day: int,
+) -> Dataset:
+    """Build a deterministic HuggingFace `Dataset` for verifiers rollouts.
+
+    Each example encodes an episode configuration (seed/leads/time budget).
+    The verifiers base `Environment` will render the `question` field into the
+    initial user message, and `SalesBenchPrimeRLEnv.setup_state` will read the
+    config fields from the rollout input.
+    """
+
+    if num_examples <= 0:
+        raise ValueError("num_examples must be > 0")
+
+    normalized_split = split.strip().lower()
+    offset = _SPLIT_OFFSETS.get(normalized_split, 0)
+
+    rows: list[dict[str, object]] = []
+    for idx in range(num_examples):
+        rows.append(
+            {
+                "question": "Start the episode. Use tools every turn.",
+                "split": normalized_split,
+                "seed": int(base_seed + offset + idx),
+                "num_leads": int(base_num_leads),
+                "work_days": int(work_days),
+                "hours_per_day": int(hours_per_day),
+            }
+        )
+
+    return Dataset.from_list(rows)
+

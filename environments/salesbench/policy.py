@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import random
 
+from models import BuyerDecision, DecisionResult, Lead, Offer, PlanType
+
 
 class BuyerPolicy:
     """Rule-based and stochastic buyer model with deterministic seeding."""
