@@ -1,0 +1,38 @@
+# Hosted RL starter config for the new salesbench-prime-rl harness.
+# Replace the env id with your pushed private/public environment id.
+
+model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
+max_steps = 300
+batch_size = 256
+rollouts_per_example = 8
+
+[sampling]
+max_tokens = 768
+temperature = 0.2
+
+[[env]]
+id = "REPLACE_WITH_YOUR_ENV_ID" # e.g. your-org/salesbench-prime-rl
+args = { split = "train", num_examples = 2048, num_leads = 48, work_days = 5, hours_per_day = 8 }
+
+[eval]
+interval = 25
+num_examples = 64
+rollouts_per_example = 2
+eval_base_model = true
+
+[[eval.env]]
+id = "REPLACE_WITH_YOUR_ENV_ID"
+args = { split = "eval", num_examples = 256, num_leads = 48, work_days = 5, hours_per_day = 8 }
+
+[val]
+interval = 10
+num_examples = 64
+rollouts_per_example = 1
+
+[buffer]
+online_difficulty_filtering = true
+easy_threshold = 0.85
+hard_threshold = 0.20
+easy_fraction = 0.0
+hard_fraction = 0.0
+seed = 2026
