@@ -12,7 +12,7 @@ max_tokens = 24576
 temperature = 0.2
 
 [[env]]
-id = "REPLACE_WITH_YOUR_ENV_ID" # e.g. your-org/salesbench-prime-rl
+id = "salesbench/salesbench"
 args = { split = "train", num_examples = 2048, num_leads = 48, total_hours = 40 }
 
 [eval]
@@ -22,7 +22,7 @@ rollouts_per_example = 2
 eval_base_model = true
 
 [[eval.env]]
-id = "REPLACE_WITH_YOUR_ENV_ID"
+id = "salesbench/salesbench"
 args = { split = "eval", num_examples = 256, num_leads = 48, total_hours = 40 }
 
 [val]

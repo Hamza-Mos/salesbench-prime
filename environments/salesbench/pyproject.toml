@@ -17,6 +17,7 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 include = [
     "salesbench.py",
+    "archetypes.py",
     "catalog.py",
     "config.py",
     "dataset.py",
