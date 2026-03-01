@@ -5,12 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-DIFFICULTY_PRESETS: dict[str, dict[str, int]] = {
-    "easy": {"num_leads": 10, "total_hours": 16},
-    "medium": {"num_leads": 30, "total_hours": 40},
-    "hard": {"num_leads": 100, "total_hours": 80},
-}
-
 
 @dataclass(slots=True)
 class ToolCostConfig:
@@ -29,7 +23,6 @@ class ToolCostConfig:
 class EpisodeConfig:
     """Episode-level configuration for one rollout."""
 
-    # Defaults aligned to original harness production preset.
     seed: int = 42
     num_leads: int = 100
     total_hours: int = 80
@@ -39,7 +32,6 @@ class EpisodeConfig:
     buyer_model: str = "gpt-5-mini"
     buyer_base_url: str = "https://api.openai.com/v1"
     buyer_api_key_var: str = "OPENAI_API_KEY"
-    difficulty: str = "custom"
     tool_costs: ToolCostConfig = field(default_factory=ToolCostConfig)
 
     @property
@@ -70,7 +62,6 @@ class EpisodeConfig:
             "buyer_model": self.buyer_model,
             "buyer_base_url": self.buyer_base_url,
             "buyer_api_key_var": self.buyer_api_key_var,
-            "difficulty": self.difficulty,
             "tool_costs": {
                 "crm_search_minutes": self.tool_costs.crm_search_minutes,
                 "quote_minutes": self.tool_costs.quote_minutes,
@@ -91,17 +82,6 @@ class EpisodeConfig:
         default_num_leads: int,
         default_total_hours: int = 80,
     ) -> "EpisodeConfig":
-        difficulty = str(data.get("difficulty", "custom"))
-
-        # Apply difficulty preset overrides
-        if difficulty in DIFFICULTY_PRESETS:
-            preset = DIFFICULTY_PRESETS[difficulty]
-            eff_num_leads = preset["num_leads"]
-            eff_total_hours = preset["total_hours"]
-        else:
-            eff_num_leads = int(data.get("num_leads", default_num_leads))
-            eff_total_hours = int(data.get("total_hours", default_total_hours))
-
         costs = ToolCostConfig(
             crm_search_minutes=int(data.get("crm_search_minutes", 1)),
             quote_minutes=int(data.get("quote_minutes", 1)),
@@ -113,15 +93,14 @@ class EpisodeConfig:
         )
         cfg = cls(
             seed=int(data.get("seed", default_seed)),
-            num_leads=eff_num_leads,
-            total_hours=eff_total_hours,
+            num_leads=int(data.get("num_leads", default_num_leads)),
+            total_hours=int(data.get("total_hours", default_total_hours)),
             max_invalid_actions=int(data.get("max_invalid_actions", 12)),
             max_callbacks_per_lead=int(data.get("max_callbacks_per_lead", 2)),
             buyer_policy=str(data.get("buyer_policy", "llm")),
             buyer_model=str(data.get("buyer_model", "gpt-5-mini")),
             buyer_base_url=str(data.get("buyer_base_url", "https://api.openai.com/v1")),
             buyer_api_key_var=str(data.get("buyer_api_key_var", "OPENAI_API_KEY")),
-            difficulty=difficulty,
             tool_costs=costs,
         )
         cfg.validate()

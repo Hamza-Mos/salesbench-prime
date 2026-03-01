@@ -197,7 +197,6 @@ def load_environment(
     buyer_model: str = "gpt-5-mini",
     buyer_base_url: str = "https://api.openai.com/v1",
     buyer_api_key_var: str = "OPENAI_API_KEY",
-    difficulty: str = "custom",
     # Large guardrail to emulate legacy safety_max_turns=None default.
     max_turns: int = 10_000,
     max_examples: int = -1,
@@ -217,7 +216,6 @@ def load_environment(
         buyer_model: LLM model identifier for the buyer (used when buyer_policy="llm").
         buyer_base_url: Base URL for the buyer LLM API.
         buyer_api_key_var: Environment variable name for the buyer LLM API key.
-        difficulty: Difficulty tier — "easy", "medium", "hard", or "custom" (default).
         max_turns: Safety cap on rollout turns.
         max_examples: Optional cap after dataset construction.
     """
@@ -243,7 +241,6 @@ def load_environment(
         buyer_model=buyer_model,
         buyer_base_url=buyer_base_url,
         buyer_api_key_var=buyer_api_key_var,
-        difficulty=difficulty,
     )
 
     eval_split = "eval" if split == "train" else split
@@ -257,7 +254,6 @@ def load_environment(
         buyer_model=buyer_model,
         buyer_base_url=buyer_base_url,
         buyer_api_key_var=buyer_api_key_var,
-        difficulty=difficulty,
     )
 
     if max_examples > 0:

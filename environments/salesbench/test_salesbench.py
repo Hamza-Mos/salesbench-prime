@@ -12,7 +12,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from catalog import ProductCatalog
-from config import DIFFICULTY_PRESETS, EpisodeConfig
+from config import EpisodeConfig
 from generator import LeadGenerator
 from models import (
     BuyerArchetype,
@@ -41,7 +41,6 @@ def _make_config(**overrides) -> EpisodeConfig:
         "num_leads": 10,
         "total_hours": 16,
         "buyer_policy": "rule_based",
-        "difficulty": "custom",
     }
     defaults.update(overrides)
     return EpisodeConfig(**defaults)
@@ -78,13 +77,6 @@ class TestGeneratorDeterminism:
             a.annual_income != b.annual_income for a, b in zip(leads_a, leads_b)
         )
 
-    def test_difficulty_affects_generation(self):
-        leads_easy = LeadGenerator(seed=42, difficulty="easy").generate(50)
-        leads_hard = LeadGenerator(seed=42, difficulty="hard").generate(50)
-        # Easy should have higher average latent need (segment-conditioned)
-        avg_need_easy = sum(l.latent_need for l in leads_easy) / len(leads_easy)
-        avg_need_hard = sum(l.latent_need for l in leads_hard) / len(leads_hard)
-        assert avg_need_easy > avg_need_hard
 
 
 # ---------------------------------------------------------------------------
@@ -460,44 +452,30 @@ class TestConversationTurn:
 
 
 # ---------------------------------------------------------------------------
-# TestDifficultyPresets
+# TestEpisodeConfig
 # ---------------------------------------------------------------------------
 
 
-class TestDifficultyPresets:
-    def test_easy_preset_applies(self):
+class TestEpisodeConfig:
+    def test_from_input_uses_defaults(self):
         cfg = EpisodeConfig.from_input(
-            {"difficulty": "easy"},
-            default_seed=42,
-            default_num_leads=100,
-        )
-        assert cfg.num_leads == DIFFICULTY_PRESETS["easy"]["num_leads"]
-        assert cfg.total_hours == DIFFICULTY_PRESETS["easy"]["total_hours"]
-        assert cfg.difficulty == "easy"
-
-    def test_hard_preset_applies(self):
-        cfg = EpisodeConfig.from_input(
-            {"difficulty": "hard"},
-            default_seed=42,
-            default_num_leads=10,
-        )
-        assert cfg.num_leads == DIFFICULTY_PRESETS["hard"]["num_leads"]
-        assert cfg.total_hours == DIFFICULTY_PRESETS["hard"]["total_hours"]
-
-    def test_custom_uses_defaults(self):
-        cfg = EpisodeConfig.from_input(
-            {"difficulty": "custom"},
+            {},
             default_seed=42,
             default_num_leads=50,
             default_total_hours=24,
         )
         assert cfg.num_leads == 50
         assert cfg.total_hours == 24
+        assert cfg.max_minutes == 24 * 60
 
-    def test_difficulty_in_to_dict(self):
-        cfg = _make_config(difficulty="easy")
-        d = cfg.to_dict()
-        assert d["difficulty"] == "easy"
+    def test_from_input_overrides(self):
+        cfg = EpisodeConfig.from_input(
+            {"num_leads": 10, "total_hours": 8},
+            default_seed=42,
+            default_num_leads=50,
+        )
+        assert cfg.num_leads == 10
+        assert cfg.total_hours == 8
 
 
 # ---------------------------------------------------------------------------

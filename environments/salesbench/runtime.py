@@ -42,7 +42,7 @@ class SalesEpisodeRuntime:
         else:
             self.policy = RuleBasedBuyerPolicy(seed=config.seed + 17)
 
-        leads = LeadGenerator(seed=config.seed, difficulty=config.difficulty).generate(
+        leads = LeadGenerator(seed=config.seed).generate(
             config.num_leads
         )
         self.leads: dict[str, Lead] = {lead.lead_id: lead for lead in leads}

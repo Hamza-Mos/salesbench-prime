@@ -114,11 +114,6 @@ _TEMPERATURE_MODIFIERS: dict[LeadTemperature, dict[str, float]] = {
 }
 
 
-_DIFFICULTY_SEGMENT_WEIGHTS: dict[str, tuple[float, ...]] = {
-    "easy": (0.60, 0.30, 0.10),
-    "hard": (0.15, 0.35, 0.50),
-}
-
 _BUDGET_RANGE: tuple[float, float] = (0.008, 0.040)
 
 
@@ -127,21 +122,15 @@ class LeadGenerator:
     """Generates a deterministic lead set from a seed."""
 
     seed: int
-    difficulty: str = "custom"
     _rng: random.Random = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._rng = random.Random(self.seed)
 
     def generate(self, num_leads: int) -> list[Lead]:
-        segment_weights = _DIFFICULTY_SEGMENT_WEIGHTS.get(self.difficulty)
-
         leads: list[Lead] = []
         for idx in range(num_leads):
-            if segment_weights is not None:
-                segment = self._rng.choices(_SEGMENTS, weights=segment_weights, k=1)[0]
-            else:
-                segment = self._rng.choice(_SEGMENTS)
+            segment = self._rng.choice(_SEGMENTS)
             age = self._rng.randint(*segment["age"])
             income = self._rng.randint(*segment["income"])
             household_size = self._rng.randint(*segment["household"])
