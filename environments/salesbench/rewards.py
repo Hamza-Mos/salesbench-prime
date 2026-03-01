@@ -93,6 +93,10 @@ _METRIC_SPECS: list[tuple[str, Callable[[SalesEpisodeRuntime], float]]] = [
     ("metric_minutes_per_conversion", lambda rt: (
         float(rt.current_minute) / rt.stats.conversions if rt.stats.conversions > 0 else 0.0
     )),
+    ("metric_max_possible_mrr", lambda rt: rt.max_achievable_mrr),
+    ("metric_revenue_capture_ratio", lambda rt: (
+        rt.stats.revenue_mrr / rt.max_achievable_mrr if rt.max_achievable_mrr > 0 else 0.0
+    )),
 ]
 
 

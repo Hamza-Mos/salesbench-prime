@@ -1,27 +1,11 @@
 ENDPOINTS = {
-    # allenai
-    "olmo3-32b-t": {
-        "model": "allenai/olmo-3-32b-think",
+    # ── allenai ──────────────────────────────────────────────────────────────
+    "olmo3.1-32b": {
+        "model": "allenai/olmo-3.1-32b-instruct",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
-    "olmo3-7b-i": {
-        "model": "allenai/olmo-3-7b-instruct",
-        "url": "https://api.pinference.ai/api/v1",
-        "key": "PRIME_API_KEY",
-    },
-    "olmo3-7b-t": {
-        "model": "allenai/olmo-3-7b-think",
-        "url": "https://api.pinference.ai/api/v1",
-        "key": "PRIME_API_KEY",
-    },
-    # arcee
-    "trinity-mini": {
-        "model": "arcee/trinity-mini",
-        "url": "https://api.pinference.ai/api/v1",
-        "key": "PRIME_API_KEY",
-    },
-    # anthropic
+    # ── anthropic ────────────────────────────────────────────────────────────
     "haiku": {
         "model": "anthropic/claude-haiku-4.5",
         "url": "https://api.pinference.ai/api/v1",
@@ -37,8 +21,13 @@ ENDPOINTS = {
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
+    "sonnet-4": {
+        "model": "anthropic/claude-sonnet-4",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
     "opus": {
-        "model": "anthropic/claude-opus-4.6",
+        "model": "anthropic/claude-opus-4.5",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
@@ -52,9 +41,36 @@ ENDPOINTS = {
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
-    # google
+    # ── arcee ────────────────────────────────────────────────────────────────
+    "trinity-mini": {
+        "model": "arcee-ai/trinity-mini",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    # ── deepseek ─────────────────────────────────────────────────────────────
+    "deepseek-v3.2": {
+        "model": "deepseek/deepseek-v3.2",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "deepseek-r1": {
+        "model": "deepseek/deepseek-r1-0528",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "deepseek-chat": {
+        "model": "deepseek/deepseek-chat-v3.1",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    # ── google ───────────────────────────────────────────────────────────────
     "gemini-2.5-flash": {
         "model": "google/gemini-2.5-flash",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "gemini-2.5-flash-lite": {
+        "model": "google/gemini-2.5-flash-lite",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
@@ -63,22 +79,112 @@ ENDPOINTS = {
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
-    "gemini-3-flash": {
-        "model": "google/gemini-3-flash",
-        "url": "https://api.pinference.ai/api/v1",
-        "key": "PRIME_API_KEY",
-    },
     "gemini-3-pro": {
         "model": "google/gemini-3-pro-preview",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
-    "gemini-3-pro-exp": {
-        "model": "google/gemini-3-pro-preview",
+    "gemini-3.1-pro": {
+        "model": "google/gemini-3.1-pro-preview",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
-    # qwen
+    "gemma-3-27b": {
+        "model": "google/gemma-3-27b-it",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    # ── meta ─────────────────────────────────────────────────────────────────
+    "llama-4-maverick": {
+        "model": "meta-llama/llama-4-maverick",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "llama-3.3-70b": {
+        "model": "meta-llama/llama-3.3-70b-instruct",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    # ── minimax ──────────────────────────────────────────────────────────────
+    "minimax-m2.5": {
+        "model": "minimax/minimax-m2.5",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    # ── mistral ──────────────────────────────────────────────────────────────
+    "mistral-small": {
+        "model": "mistralai/mistral-small-3.2-24b-instruct",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    # ── moonshot ─────────────────────────────────────────────────────────────
+    "kimi-k2": {
+        "model": "moonshotai/kimi-k2-0905",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "kimi-k2.5": {
+        "model": "moonshotai/kimi-k2.5",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "kimi-k2-t": {
+        "model": "moonshotai/kimi-k2-thinking",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    # ── openai (via Prime Inference) ─────────────────────────────────────────
+    "gpt-oss-120b": {
+        "model": "openai/gpt-oss-120b",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "gpt-oss-20b": {
+        "model": "openai/gpt-oss-20b",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "gpt-5-nano": {
+        "model": "openai/gpt-5-nano",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "gpt-5-mini": {
+        "model": "openai/gpt-5-mini",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "gpt-5": {
+        "model": "openai/gpt-5",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "gpt-5.1": {
+        "model": "openai/gpt-5.1",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "gpt-5.2": {
+        "model": "openai/gpt-5.2",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "gpt-5.2-pro": {
+        "model": "openai/gpt-5.2-pro",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "gpt-5.3-codex": {
+        "model": "openai/gpt-5.3-codex",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    # ── qwen ─────────────────────────────────────────────────────────────────
+    "qwen3-8b": {
+        "model": "qwen/qwen3-8b",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
     "qwen3-30b-i": {
         "model": "qwen/qwen3-30b-a3b-instruct-2507",
         "url": "https://api.pinference.ai/api/v1",
@@ -96,6 +202,16 @@ ENDPOINTS = {
     },
     "qwen3-235b-t": {
         "model": "qwen/qwen3-235b-a22b-thinking-2507",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "qwen3-coder": {
+        "model": "qwen/qwen3-coder",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "qwen3-coder-next": {
+        "model": "qwen/qwen3-coder-next",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
@@ -119,54 +235,28 @@ ENDPOINTS = {
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
-    # moonshot
-    "kimi-k2": {
-        "model": "moonshotai/kimi-k2-0905",
+    # ── x-ai ─────────────────────────────────────────────────────────────────
+    "grok-4": {
+        "model": "x-ai/grok-4",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
-    "kimi-k2-t": {
-        "model": "moonshotai/kimi-k2-thinking",
+    "grok-4-fast": {
+        "model": "x-ai/grok-4-fast",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
-    # openai
-    "gpt-oss-120b": {
-        "model": "openai/gpt-oss-120b",
+    "grok-4.1-fast": {
+        "model": "x-ai/grok-4.1-fast",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
-    "gpt-oss-20b": {
-        "model": "openai/gpt-oss-20b",
+    "grok-3-mini": {
+        "model": "x-ai/grok-3-mini",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
-    "gpt-5-nano": {
-        "model": "gpt-5-nano",
-        "url": "https://api.openai.com/v1",
-        "key": "OPENAI_API_KEY",
-    },
-    "gpt-5-mini": {
-        "model": "gpt-5-mini",
-        "url": "https://api.openai.com/v1",
-        "key": "OPENAI_API_KEY",
-    },
-    "gpt-5": {
-        "model": "gpt-5",
-        "url": "https://api.openai.com/v1",
-        "key": "OPENAI_API_KEY",
-    },
-    "gpt-5.1": {
-        "model": "gpt-5.1",
-        "url": "https://api.openai.com/v1",
-        "key": "OPENAI_API_KEY",
-    },
-    "gpt-5.2": {
-        "model": "gpt-5.2",
-        "url": "https://api.openai.com/v1",
-        "key": "OPENAI_API_KEY",
-    },
-    # z-ai
+    # ── z-ai ─────────────────────────────────────────────────────────────────
     "glm-4.5": {
         "model": "z-ai/glm-4.5",
         "url": "https://api.pinference.ai/api/v1",
@@ -184,6 +274,16 @@ ENDPOINTS = {
     },
     "glm-4.7": {
         "model": "z-ai/glm-4.7",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "glm-4.7-flash": {
+        "model": "z-ai/glm-4.7-flash",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "glm-5": {
+        "model": "z-ai/glm-5",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
