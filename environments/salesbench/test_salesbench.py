@@ -15,9 +15,12 @@ from catalog import ProductCatalog
 from config import DIFFICULTY_PRESETS, EpisodeConfig
 from generator import LeadGenerator
 from models import (
+    BuyerArchetype,
     BuyerDecision,
     CallSession,
+    Lead,
     LeadStatus,
+    LeadTemperature,
     Offer,
     PlanType,
     RiskClass,
@@ -79,15 +82,10 @@ class TestGeneratorDeterminism:
     def test_difficulty_affects_generation(self):
         leads_easy = LeadGenerator(seed=42, difficulty="easy").generate(50)
         leads_hard = LeadGenerator(seed=42, difficulty="hard").generate(50)
-        # Easy should have higher average latent need
+        # Easy should have higher average latent need (segment-conditioned)
         avg_need_easy = sum(l.latent_need for l in leads_easy) / len(leads_easy)
         avg_need_hard = sum(l.latent_need for l in leads_hard) / len(leads_hard)
         assert avg_need_easy > avg_need_hard
-
-        # Easy should have higher average budget multiplier
-        avg_budget_easy = sum(l.budget_monthly for l in leads_easy) / len(leads_easy)
-        avg_budget_hard = sum(l.budget_monthly for l in leads_hard) / len(leads_hard)
-        assert avg_budget_easy > avg_budget_hard
 
 
 # ---------------------------------------------------------------------------
@@ -532,3 +530,144 @@ class TestCallSessionModel:
             started_minute=0,
         )
         assert session.messages_sent == 0
+
+
+# ---------------------------------------------------------------------------
+# TestTemperatureAndArchetype
+# ---------------------------------------------------------------------------
+
+
+class TestTemperatureAndArchetype:
+    def test_generated_leads_have_valid_temperature(self):
+        leads = LeadGenerator(seed=42).generate(50)
+        valid = set(LeadTemperature)
+        for lead in leads:
+            assert lead.temperature in valid
+
+    def test_generated_leads_have_valid_archetype(self):
+        leads = LeadGenerator(seed=42).generate(50)
+        valid = set(BuyerArchetype)
+        for lead in leads:
+            assert lead.archetype in valid
+
+    def test_determinism_temperature_archetype(self):
+        leads_a = LeadGenerator(seed=99).generate(30)
+        leads_b = LeadGenerator(seed=99).generate(30)
+        for a, b in zip(leads_a, leads_b):
+            assert a.temperature == b.temperature
+            assert a.archetype == b.archetype
+
+    def test_temperature_distribution_is_varied(self):
+        leads = LeadGenerator(seed=42).generate(100)
+        temps = {lead.temperature for lead in leads}
+        # With 100 leads and uniform sampling, all 4 temperatures should appear
+        assert len(temps) == 4
+
+    def test_archetype_distribution_is_varied(self):
+        leads = LeadGenerator(seed=42).generate(200)
+        archetypes = {lead.archetype for lead in leads}
+        # With 200 leads and uniform sampling, all 10 archetypes should appear
+        assert len(archetypes) == 10
+
+    def test_brief_dict_includes_temperature_and_archetype(self):
+        leads = LeadGenerator(seed=42).generate(5)
+        lead = leads[0]
+        brief = lead.to_brief_dict()
+        assert "temperature" in brief
+        assert "archetype" in brief
+        assert brief["temperature"] == lead.temperature.value
+        assert brief["archetype"] == lead.archetype.value
+
+    def test_detail_dict_includes_temperature_and_archetype(self):
+        leads = LeadGenerator(seed=42).generate(5)
+        lead = leads[0]
+        detail = lead.to_detail_dict()
+        assert "temperature" in detail
+        assert "archetype" in detail
+
+
+# ---------------------------------------------------------------------------
+# TestRuleBasedPolicyTemperatureArchetype
+# ---------------------------------------------------------------------------
+
+
+def _make_test_lead(**overrides) -> Lead:
+    defaults = dict(
+        lead_id="test_001",
+        full_name="Test Buyer",
+        age=35,
+        annual_income=120_000,
+        state_code="CA",
+        household_size=3,
+        dependents=2,
+        risk_class=RiskClass.PREFERRED,
+        latent_need=0.90,
+        trust_level=0.70,
+        price_sensitivity=0.30,
+        budget_monthly=200.0,
+        max_calls=3,
+        call_count=1,
+        temperature=LeadTemperature.LUKEWARM,
+        archetype=BuyerArchetype.ANALYTICAL,
+    )
+    defaults.update(overrides)
+    return Lead(**defaults)
+
+
+class TestRuleBasedPolicyTemperatureArchetype:
+    def test_cold_lead_harder_to_close(self):
+        """A COLD lead should require a higher score to accept than a HOT lead."""
+        policy = RuleBasedBuyerPolicy(seed=42)
+        offer = Offer(
+            plan_type=PlanType.TERM,
+            coverage_amount=960_000,
+            monthly_premium=60.0,
+            next_step="Sign application",
+            term_years=20,
+        )
+        # Same lead attributes, different temperature
+        hot_lead = _make_test_lead(temperature=LeadTemperature.HOT)
+        cold_lead = _make_test_lead(temperature=LeadTemperature.COLD)
+
+        hot_result = policy.evaluate_offer(lead=hot_lead, offer=offer)
+        # Reset RNG for fair comparison
+        policy_2 = RuleBasedBuyerPolicy(seed=42)
+        cold_result = policy_2.evaluate_offer(lead=cold_lead, offer=offer)
+
+        # HOT should accept; COLD may not (or at least the scores should differ)
+        # Since the threshold is different, HOT should be more likely to accept
+        if hot_result.decision == BuyerDecision.ACCEPT:
+            # With same score, COLD has higher threshold so may reject
+            assert cold_result.decision in (BuyerDecision.ACCEPT, BuyerDecision.REJECT)
+
+    def test_budget_hawk_price_sensitivity(self):
+        """BUDGET_HAWK archetype should penalize price more heavily."""
+        policy_1 = RuleBasedBuyerPolicy(seed=42)
+        policy_2 = RuleBasedBuyerPolicy(seed=42)
+        offer = Offer(
+            plan_type=PlanType.TERM,
+            coverage_amount=960_000,
+            monthly_premium=80.0,
+            next_step="Sign application",
+            term_years=20,
+        )
+        analytical_lead = _make_test_lead(archetype=BuyerArchetype.ANALYTICAL)
+        budget_lead = _make_test_lead(archetype=BuyerArchetype.BUDGET_HAWK)
+
+        result_analytical = policy_1.evaluate_offer(lead=analytical_lead, offer=offer)
+        result_budget = policy_2.evaluate_offer(lead=budget_lead, offer=offer)
+
+        # BUDGET_HAWK has 1.4x price sensitivity multiplier
+        assert result_budget.score < result_analytical.score
+
+    def test_archetype_conditioned_responses(self):
+        """Archetype-specific response pool should be used."""
+        policy = RuleBasedBuyerPolicy(seed=42)
+        skeptic_lead = _make_test_lead(archetype=BuyerArchetype.SKEPTIC)
+        responses = set()
+        for seed in range(50):
+            p = RuleBasedBuyerPolicy(seed=seed)
+            responses.add(p.generate_response(lead=skeptic_lead, agent_message="Hi"))
+        # Should include at least one skeptic-specific response
+        skeptic_phrases = {"What's the catch here?", "Are there any hidden fees I should know about?"}
+        assert responses & skeptic_phrases

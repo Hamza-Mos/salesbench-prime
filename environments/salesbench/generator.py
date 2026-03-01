@@ -5,7 +5,8 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
-from models import Lead, RiskClass
+from archetypes import ARCHETYPE_LIST
+from models import BuyerArchetype, Lead, LeadTemperature, RiskClass
 
 _FIRST_NAMES = [
     "Alex",
@@ -103,16 +104,22 @@ _SEGMENTS = (
 
 _RISK_CLASSES = (RiskClass.PREFERRED, RiskClass.STANDARD, RiskClass.SUBSTANDARD)
 
+_TEMPERATURE_LIST = list(LeadTemperature)
+
+_TEMPERATURE_MODIFIERS: dict[LeadTemperature, dict[str, float]] = {
+    LeadTemperature.COLD: {"trust_delta": -0.10, "need_delta": -0.05, "max_calls_delta": -1},
+    LeadTemperature.LUKEWARM: {"trust_delta": 0.00, "need_delta": 0.00, "max_calls_delta": 0},
+    LeadTemperature.WARM: {"trust_delta": 0.05, "need_delta": 0.05, "max_calls_delta": 0},
+    LeadTemperature.HOT: {"trust_delta": 0.10, "need_delta": 0.10, "max_calls_delta": 1},
+}
+
 
 _DIFFICULTY_SEGMENT_WEIGHTS: dict[str, tuple[float, ...]] = {
     "easy": (0.60, 0.30, 0.10),
     "hard": (0.15, 0.35, 0.50),
 }
 
-_DIFFICULTY_BUDGET_RANGE: dict[str, tuple[float, float]] = {
-    "easy": (0.020, 0.040),
-    "hard": (0.008, 0.022),
-}
+_BUDGET_RANGE: tuple[float, float] = (0.008, 0.040)
 
 
 @dataclass(slots=True)
@@ -128,7 +135,6 @@ class LeadGenerator:
 
     def generate(self, num_leads: int) -> list[Lead]:
         segment_weights = _DIFFICULTY_SEGMENT_WEIGHTS.get(self.difficulty)
-        budget_range = _DIFFICULTY_BUDGET_RANGE.get(self.difficulty, (0.010, 0.030))
 
         leads: list[Lead] = []
         for idx in range(num_leads):
@@ -143,8 +149,6 @@ class LeadGenerator:
             latent_need = self._rng.uniform(*segment["need"])
             trust = self._rng.uniform(*segment["trust"])
             price = self._rng.uniform(*segment["price"])
-            budget_multiplier = self._rng.uniform(*budget_range)
-            budget_monthly = (income / 12.0) * budget_multiplier
             max_calls = self._rng.randint(*segment["max_calls"])
 
             risk_class = self._rng.choices(
@@ -152,6 +156,20 @@ class LeadGenerator:
                 weights=segment["risk_weights"],
                 k=1,
             )[0]
+
+            # Temperature — uniform 25/25/25/25
+            temperature: LeadTemperature = self._rng.choice(_TEMPERATURE_LIST)
+            mods = _TEMPERATURE_MODIFIERS[temperature]
+            trust = max(0.0, min(1.0, trust + mods["trust_delta"]))
+            latent_need = max(0.0, min(1.0, latent_need + mods["need_delta"]))
+            max_calls = max(1, max_calls + int(mods["max_calls_delta"]))
+
+            # Archetype — uniform across all 10
+            archetype: BuyerArchetype = self._rng.choice(ARCHETYPE_LIST)
+
+            # Budget — single wide range for even deal-size distribution
+            budget_multiplier = self._rng.uniform(*_BUDGET_RANGE)
+            budget_monthly = (income / 12.0) * budget_multiplier
 
             full_name = f"{self._rng.choice(_FIRST_NAMES)} {self._rng.choice(_LAST_NAMES)}"
             lead = Lead(
@@ -168,6 +186,8 @@ class LeadGenerator:
                 price_sensitivity=price,
                 budget_monthly=budget_monthly,
                 max_calls=max_calls,
+                temperature=temperature,
+                archetype=archetype,
             )
             leads.append(lead)
         return leads

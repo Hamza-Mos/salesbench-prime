@@ -11,6 +11,26 @@ class RuntimeActionError(ValueError):
     """Raised when the agent attempts an invalid runtime action."""
 
 
+class LeadTemperature(str, Enum):
+    COLD = "cold"          # No prior interest, skeptical, hard to engage
+    LUKEWARM = "lukewarm"  # Some awareness, open to hearing more
+    WARM = "warm"          # Has expressed interest or been referred
+    HOT = "hot"            # Actively shopping, ready to buy soon
+
+
+class BuyerArchetype(str, Enum):
+    ANALYTICAL = "analytical"
+    RELATIONSHIP = "relationship"
+    SKEPTIC = "skeptic"
+    BUDGET_HAWK = "budget_hawk"
+    DELEGATOR = "delegator"
+    PROCRASTINATOR = "procrastinator"
+    STATUS_SEEKER = "status_seeker"
+    PROTECTOR = "protector"
+    COMPARISON_SHOPPER = "comparison_shopper"
+    IMPULSE_DECIDER = "impulse_decider"
+
+
 class LeadStatus(str, Enum):
     ACTIVE = "active"
     CONVERTED = "converted"
@@ -94,6 +114,8 @@ class Lead:
     price_sensitivity: float
     budget_monthly: float
     max_calls: int
+    temperature: LeadTemperature = LeadTemperature.LUKEWARM
+    archetype: BuyerArchetype = BuyerArchetype.ANALYTICAL
     status: LeadStatus = LeadStatus.ACTIVE
     do_not_call: bool = False
     call_count: int = 0
@@ -110,6 +132,8 @@ class Lead:
             "state": self.state_code,
             "need_score": round(self.latent_need, 3),
             "budget_monthly": round(self.budget_monthly, 2),
+            "temperature": self.temperature.value,
+            "archetype": self.archetype.value,
             "calls_made": self.call_count,
             "do_not_call": self.do_not_call,
         }

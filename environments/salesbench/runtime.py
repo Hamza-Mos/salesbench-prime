@@ -448,6 +448,8 @@ class SalesEpisodeRuntime:
             "Episode briefing:\n"
             f"- Leads loaded: {len(self.leads)}\n"
             f"- Time budget: {self.config.max_minutes} minutes\n"
+            "- Each lead has a temperature (cold/lukewarm/warm/hot) and personality archetype\n"
+            "- Adapt your approach to each lead's personality and readiness level\n"
             "- Objective: maximize monthly recurring premium while avoiding compliance failures\n"
             "- Termination: time exhausted, pipeline exhausted, or too many invalid actions"
         )
@@ -536,6 +538,19 @@ class SalesEpisodeRuntime:
             raise RuntimeActionError("minutes cannot be negative")
         self.current_minute += minutes
         self._record_event(f"time+{minutes} action={action} now={self.current_minute}")
+        remaining = max(0, self.config.max_minutes - self.current_minute)
+        pct = min(100.0, self.current_minute / max(1, self.config.max_minutes) * 100)
+        logger.info(
+            "[%d/%d min] (%.0f%%) %d remaining | action=%s | mrr=$%.2f convs=%d calls=%d",
+            self.current_minute,
+            self.config.max_minutes,
+            pct,
+            remaining,
+            action,
+            self.stats.revenue_mrr,
+            self.stats.conversions,
+            self.stats.calls_started,
+        )
         self._check_termination()
 
     def _mark_due_callbacks_completed(self, *, lead_id: str) -> None:
