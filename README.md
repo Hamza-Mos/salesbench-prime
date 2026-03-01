@@ -14,11 +14,11 @@ Each episode is fully deterministic given a seed — the same seed always produc
 # install the environment
 prime env install salesbench/salesbench
 
-# run an eval (1 episode, 1 attempt, using gpt-4.1-mini)
-prime eval run salesbench/salesbench -m openai/gpt-4.1-mini -n 1 -r 1
+# run an eval (1 episode, 1 attempt, using gpt-5-mini)
+prime eval run salesbench/salesbench -m openai/gpt-5-mini -n 1 -r 1
 
 # more robust eval (10 episodes, 3 attempts each = 30 total runs)
-prime eval run salesbench/salesbench -m openai/gpt-4.1-mini -n 10 -r 3
+prime eval run salesbench/salesbench -m openai/gpt-5-mini -n 10 -r 3
 ```
 
 ### Key flags
@@ -74,14 +74,14 @@ The rule-based buyer does not require any API key.
 
 ```bash
 # Use rule-based buyer (deterministic, no LLM call)
-prime eval run salesbench/salesbench -m openai/gpt-4.1-mini -n 1 -r 1 \
+prime eval run salesbench/salesbench -m openai/gpt-5-mini -n 1 -r 1 \
   -a '{"buyer_policy": "rule_based"}'
 
 # Use LLM buyer via OpenAI directly (default)
-prime eval run salesbench/salesbench -m openai/gpt-4.1-mini -n 1 -r 1
+prime eval run salesbench/salesbench -m openai/gpt-5-mini -n 1 -r 1
 
 # Use LLM buyer via PrimeIntellect proxy
-prime eval run salesbench/salesbench -m openai/gpt-4.1-mini -n 1 -r 1 \
+prime eval run salesbench/salesbench -m openai/gpt-5-mini -n 1 -r 1 \
   -a '{"buyer_model": "openai/gpt-5-mini", "buyer_base_url": "https://api.pinference.ai/api/v1", "buyer_api_key_var": "PRIME_API_KEY"}'
 ```
 

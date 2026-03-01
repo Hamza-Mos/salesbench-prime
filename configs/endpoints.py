@@ -28,12 +28,12 @@ ENDPOINTS = {
         "key": "PRIME_API_KEY",
     },
     "sonnet": {
-        "model": "anthropic/claude-4.5-sonnet",
+        "model": "anthropic/claude-4.6-sonnet",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
     "opus": {
-        "model": "anthropic/claude-4.5-opus",
+        "model": "anthropic/claude-4.6-opus",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
@@ -125,21 +125,6 @@ ENDPOINTS = {
         "model": "openai/gpt-oss-20b",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
-    },
-    "gpt-4.1-nano": {
-        "model": "gpt-4.1-nano",
-        "url": "https://api.openai.com/v1",
-        "key": "OPENAI_API_KEY",
-    },
-    "gpt-4.1-mini": {
-        "model": "gpt-4.1-mini",
-        "url": "https://api.openai.com/v1",
-        "key": "OPENAI_API_KEY",
-    },
-    "gpt-4.1": {
-        "model": "gpt-4.1",
-        "url": "https://api.openai.com/v1",
-        "key": "OPENAI_API_KEY",
     },
     "gpt-5-nano": {
         "model": "gpt-5-nano",
