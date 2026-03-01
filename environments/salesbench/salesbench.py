@@ -47,16 +47,14 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         eval_dataset: Dataset | None,
         default_seed: int,
         default_num_leads: int,
-        default_work_days: int,
-        default_hours_per_day: int,
+        default_total_hours: int,
         max_turns: int,
         system_prompt: str | None = None,
         **kwargs: Any,
     ) -> None:
         self.default_seed = default_seed
         self.default_num_leads = default_num_leads
-        self.default_work_days = default_work_days
-        self.default_hours_per_day = default_hours_per_day
+        self.default_total_hours = default_total_hours
 
         rubric = vf.Rubric(funcs=RUBRIC_FUNCS, weights=RUBRIC_WEIGHTS)
         super().__init__(
@@ -81,8 +79,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
             input_data,
             default_seed=self.default_seed,
             default_num_leads=self.default_num_leads,
-            default_work_days=self.default_work_days,
-            default_hours_per_day=self.default_hours_per_day,
+            default_total_hours=self.default_total_hours,
         )
         runtime = SalesEpisodeRuntime(config=config)
 
@@ -195,8 +192,7 @@ def load_environment(
     base_seed: int = 42,
     seed: int | None = None,
     num_leads: int = 100,
-    work_days: int = 10,
-    hours_per_day: int = 8,
+    total_hours: int = 80,
     buyer_policy: str = "llm",
     buyer_model: str = "gpt-5-mini",
     buyer_base_url: str = "https://api.openai.com/v1",
@@ -216,8 +212,7 @@ def load_environment(
         base_seed: Base seed for deterministic scenario generation.
         seed: Optional alias for `base_seed` used by Prime eval args.
         num_leads: Baseline leads per episode (curriculum scales around this).
-        work_days: Simulated work days in an episode.
-        hours_per_day: Simulated working hours per day.
+        total_hours: Total simulated hours for the episode.
         buyer_policy: Buyer model type — "llm" (default) or "rule_based".
         buyer_model: LLM model identifier for the buyer (used when buyer_policy="llm").
         buyer_base_url: Base URL for the buyer LLM API.
@@ -243,8 +238,7 @@ def load_environment(
         num_examples=num_examples,
         base_seed=resolved_seed,
         base_num_leads=num_leads,
-        work_days=work_days,
-        hours_per_day=hours_per_day,
+        total_hours=total_hours,
         buyer_policy=buyer_policy,
         buyer_model=buyer_model,
         buyer_base_url=buyer_base_url,
@@ -258,8 +252,7 @@ def load_environment(
         num_examples=eval_num_examples,
         base_seed=resolved_seed,
         base_num_leads=num_leads,
-        work_days=work_days,
-        hours_per_day=hours_per_day,
+        total_hours=total_hours,
         buyer_policy=buyer_policy,
         buyer_model=buyer_model,
         buyer_base_url=buyer_base_url,
@@ -276,8 +269,7 @@ def load_environment(
         eval_dataset=eval_dataset,
         default_seed=resolved_seed,
         default_num_leads=num_leads,
-        default_work_days=work_days,
-        default_hours_per_day=hours_per_day,
+        default_total_hours=total_hours,
         max_turns=max_turns,
         system_prompt=system_prompt,
     )

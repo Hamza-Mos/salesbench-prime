@@ -39,8 +39,7 @@ def _make_config(**overrides) -> EpisodeConfig:
     defaults = {
         "seed": 42,
         "num_leads": 10,
-        "work_days": 2,
-        "hours_per_day": 8,
+        "total_hours": 16,
         "buyer_policy": "rule_based",
         "difficulty": "custom",
     }
@@ -337,7 +336,7 @@ class TestRewardNormalization:
 
 class TestCallFinalizationOnTermination:
     def test_active_call_finalized_on_time_exhaustion(self):
-        rt = _make_runtime(work_days=1, hours_per_day=1)  # 60 minute budget
+        rt = _make_runtime(total_hours=1)  # 60 minute budget
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
         assert rt.active_call is not None
@@ -471,11 +470,9 @@ class TestDifficultyPresets:
             {"difficulty": "easy"},
             default_seed=42,
             default_num_leads=100,
-            default_work_days=10,
-            default_hours_per_day=8,
         )
         assert cfg.num_leads == DIFFICULTY_PRESETS["easy"]["num_leads"]
-        assert cfg.work_days == DIFFICULTY_PRESETS["easy"]["work_days"]
+        assert cfg.total_hours == DIFFICULTY_PRESETS["easy"]["total_hours"]
         assert cfg.difficulty == "easy"
 
     def test_hard_preset_applies(self):
@@ -483,23 +480,19 @@ class TestDifficultyPresets:
             {"difficulty": "hard"},
             default_seed=42,
             default_num_leads=10,
-            default_work_days=2,
-            default_hours_per_day=8,
         )
         assert cfg.num_leads == DIFFICULTY_PRESETS["hard"]["num_leads"]
-        assert cfg.work_days == DIFFICULTY_PRESETS["hard"]["work_days"]
+        assert cfg.total_hours == DIFFICULTY_PRESETS["hard"]["total_hours"]
 
     def test_custom_uses_defaults(self):
         cfg = EpisodeConfig.from_input(
             {"difficulty": "custom"},
             default_seed=42,
             default_num_leads=50,
-            default_work_days=3,
-            default_hours_per_day=6,
+            default_total_hours=24,
         )
         assert cfg.num_leads == 50
-        assert cfg.work_days == 3
-        assert cfg.hours_per_day == 6
+        assert cfg.total_hours == 24
 
     def test_difficulty_in_to_dict(self):
         cfg = _make_config(difficulty="easy")

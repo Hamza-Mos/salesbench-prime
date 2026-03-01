@@ -13,7 +13,7 @@ temperature = 0.2
 
 [[env]]
 id = "REPLACE_WITH_YOUR_ENV_ID" # e.g. your-org/salesbench-prime-rl
-args = { split = "train", num_examples = 2048, num_leads = 48, work_days = 5, hours_per_day = 8 }
+args = { split = "train", num_examples = 2048, num_leads = 48, total_hours = 40 }
 
 [eval]
 interval = 25
@@ -23,7 +23,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "REPLACE_WITH_YOUR_ENV_ID"
-args = { split = "eval", num_examples = 256, num_leads = 48, work_days = 5, hours_per_day = 8 }
+args = { split = "eval", num_examples = 256, num_leads = 48, total_hours = 40 }
 
 [val]
 interval = 10

@@ -6,9 +6,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 DIFFICULTY_PRESETS: dict[str, dict[str, int]] = {
-    "easy": {"num_leads": 10, "work_days": 2, "hours_per_day": 8},
-    "medium": {"num_leads": 30, "work_days": 5, "hours_per_day": 8},
-    "hard": {"num_leads": 100, "work_days": 10, "hours_per_day": 8},
+    "easy": {"num_leads": 10, "total_hours": 16},
+    "medium": {"num_leads": 30, "total_hours": 40},
+    "hard": {"num_leads": 100, "total_hours": 80},
 }
 
 
@@ -32,8 +32,7 @@ class EpisodeConfig:
     # Defaults aligned to original harness production preset.
     seed: int = 42
     num_leads: int = 100
-    work_days: int = 10
-    hours_per_day: int = 8
+    total_hours: int = 80
     max_invalid_actions: int = 12
     max_callbacks_per_lead: int = 2
     buyer_policy: str = "llm"
@@ -45,17 +44,15 @@ class EpisodeConfig:
 
     @property
     def max_minutes(self) -> int:
-        return self.work_days * self.hours_per_day * 60
+        return self.total_hours * 60
 
     def validate(self) -> None:
         if self.seed < 0:
             raise ValueError("seed must be non-negative")
         if self.num_leads <= 0:
             raise ValueError("num_leads must be > 0")
-        if self.work_days <= 0:
-            raise ValueError("work_days must be > 0")
-        if self.hours_per_day <= 0:
-            raise ValueError("hours_per_day must be > 0")
+        if self.total_hours <= 0:
+            raise ValueError("total_hours must be > 0")
         if self.max_invalid_actions <= 0:
             raise ValueError("max_invalid_actions must be > 0")
         if self.max_callbacks_per_lead < 0:
@@ -65,8 +62,7 @@ class EpisodeConfig:
         return {
             "seed": self.seed,
             "num_leads": self.num_leads,
-            "work_days": self.work_days,
-            "hours_per_day": self.hours_per_day,
+            "total_hours": self.total_hours,
             "max_minutes": self.max_minutes,
             "max_invalid_actions": self.max_invalid_actions,
             "max_callbacks_per_lead": self.max_callbacks_per_lead,
@@ -93,8 +89,7 @@ class EpisodeConfig:
         *,
         default_seed: int,
         default_num_leads: int,
-        default_work_days: int,
-        default_hours_per_day: int,
+        default_total_hours: int = 80,
     ) -> "EpisodeConfig":
         difficulty = str(data.get("difficulty", "custom"))
 
@@ -102,12 +97,10 @@ class EpisodeConfig:
         if difficulty in DIFFICULTY_PRESETS:
             preset = DIFFICULTY_PRESETS[difficulty]
             eff_num_leads = preset["num_leads"]
-            eff_work_days = preset["work_days"]
-            eff_hours_per_day = preset["hours_per_day"]
+            eff_total_hours = preset["total_hours"]
         else:
             eff_num_leads = int(data.get("num_leads", default_num_leads))
-            eff_work_days = int(data.get("work_days", default_work_days))
-            eff_hours_per_day = int(data.get("hours_per_day", default_hours_per_day))
+            eff_total_hours = int(data.get("total_hours", default_total_hours))
 
         costs = ToolCostConfig(
             crm_search_minutes=int(data.get("crm_search_minutes", 1)),
@@ -121,8 +114,7 @@ class EpisodeConfig:
         cfg = cls(
             seed=int(data.get("seed", default_seed)),
             num_leads=eff_num_leads,
-            work_days=eff_work_days,
-            hours_per_day=eff_hours_per_day,
+            total_hours=eff_total_hours,
             max_invalid_actions=int(data.get("max_invalid_actions", 12)),
             max_callbacks_per_lead=int(data.get("max_callbacks_per_lead", 2)),
             buyer_policy=str(data.get("buyer_policy", "llm")),
