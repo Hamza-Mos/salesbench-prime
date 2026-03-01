@@ -25,7 +25,7 @@ from models import (
     RuntimeActionError,
 )
 
-logger = logging.getLogger("salesbench")
+logger = logging.getLogger("verifiers.salesbench")
 
 
 _TEMPERATURE_THRESHOLD_OFFSET: dict[LeadTemperature, float] = {

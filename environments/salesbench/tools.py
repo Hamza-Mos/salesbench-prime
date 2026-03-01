@@ -10,7 +10,7 @@ from typing import Any
 from models import RuntimeActionError
 from runtime import SalesEpisodeRuntime
 
-logger = logging.getLogger("salesbench")
+logger = logging.getLogger("verifiers.salesbench")
 
 
 def _as_json(payload: dict[str, Any]) -> str:

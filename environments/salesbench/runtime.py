@@ -23,7 +23,7 @@ from models import (
 )
 from policy import LLMBuyerPolicy, RuleBasedBuyerPolicy
 
-logger = logging.getLogger("salesbench")
+logger = logging.getLogger("verifiers.salesbench")
 
 
 class SalesEpisodeRuntime:
