@@ -236,8 +236,8 @@ class LLMBuyerPolicy:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=llm_messages,
-                temperature=0.7,
-                max_tokens=256,
+                temperature=1.0,
+                max_completion_tokens=256,
                 response_format={"type": "json_object"},
             )
             raw = response.choices[0].message.content or "{}"
@@ -306,8 +306,8 @@ class LLMBuyerPolicy:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=llm_messages,
-                temperature=0.7,
-                max_tokens=128,
+                temperature=1.0,
+                max_completion_tokens=128,
             )
             raw = response.choices[0].message.content or ""
         except Exception as exc:

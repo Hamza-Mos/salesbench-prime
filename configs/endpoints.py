@@ -23,17 +23,32 @@ ENDPOINTS = {
     },
     # anthropic
     "haiku": {
-        "model": "anthropic/claude-4.5-haiku",
+        "model": "anthropic/claude-haiku-4.5",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
     "sonnet": {
-        "model": "anthropic/claude-4.6-sonnet",
+        "model": "anthropic/claude-sonnet-4.6",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "sonnet-4.5": {
+        "model": "anthropic/claude-sonnet-4.5",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },
     "opus": {
-        "model": "anthropic/claude-4.6-opus",
+        "model": "anthropic/claude-opus-4.5",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "opus-4.1": {
+        "model": "anthropic/claude-opus-4.1",
+        "url": "https://api.pinference.ai/api/v1",
+        "key": "PRIME_API_KEY",
+    },
+    "opus-4": {
+        "model": "anthropic/claude-opus-4",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },

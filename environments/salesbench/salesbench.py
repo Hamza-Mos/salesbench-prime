@@ -198,7 +198,7 @@ def load_environment(
     work_days: int = 10,
     hours_per_day: int = 8,
     buyer_policy: str = "llm",
-    buyer_model: str = "openai/gpt-5-mini",
+    buyer_model: str = "gpt-5-mini",
     buyer_base_url: str = "https://api.openai.com/v1",
     buyer_api_key_var: str = "OPENAI_API_KEY",
     difficulty: str = "custom",

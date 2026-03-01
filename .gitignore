@@ -19,3 +19,4 @@ environments/*/.prime/*
 **/uv.lock
 
 .env
+secrets.env

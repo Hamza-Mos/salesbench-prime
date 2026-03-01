@@ -3,9 +3,9 @@ name = "salesbench"
 description = "Stateful, tool-use sales simulation environment for Prime Lab (verifiers)."
 tags = ["sales", "tool-use", "rl", "train", "eval"]
 version = "0.1.0"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
-    "verifiers>=0.1.9.post3",
+    "verifiers>=0.1.11.dev0",
     "datasets>=4.0.0",
     "openai>=1.0.0",
 ]
@@ -26,10 +26,8 @@ include = [
     "rewards.py",
     "runtime.py",
     "tools.py",
-    "README.md",
-    "pyproject.toml",
 ]
 
 [tool.verifiers.eval]
-num_examples = 5
-rollouts_per_example = 3
+num_examples = -1
+rollouts_per_example = 4
