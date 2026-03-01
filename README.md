@@ -44,6 +44,47 @@ The agent interacts via tools: `crm_search_leads`, `crm_get_lead`, `calling_star
 
 An episode ends when time runs out, all leads are exhausted (converted/DNC/max calls), or too many invalid actions occur.
 
+## Buyer Model
+
+When the agent proposes an offer, a simulated buyer decides whether to accept, reject, or hang up. Two buyer models are available:
+
+- **LLM buyer (default)** — Uses a cheap LLM (`openai/gpt-4.1-nano` by default) to simulate realistic buyer behavior. The model receives the lead's full persona (demographics, budget, personality traits) and the conversation history, then responds in-character with a structured accept/reject/hang_up decision and a natural-language reason.
+- **Rule-based buyer** — A deterministic scoring formula based on affordability, coverage fit, plan fit, and call pressure. Fast and reproducible (seeded RNG), but less realistic.
+
+### Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `buyer_policy` | `"llm"` | `"llm"` or `"rule_based"` |
+| `buyer_model` | `"openai/gpt-4.1-nano"` | Model name passed to the API |
+| `buyer_base_url` | `"https://api.openai.com/v1"` | Base URL for the buyer LLM API |
+| `buyer_api_key_var` | `"OPENAI_API_KEY"` | Env var name holding the API key |
+
+The LLM buyer requires an API key. Set the environment variable named by `buyer_api_key_var` before running:
+
+```bash
+# For OpenAI direct (default)
+export OPENAI_API_KEY="sk-..."
+
+# For PrimeIntellect proxy
+export PRIME_API_KEY="your-prime-key"
+```
+
+The rule-based buyer does not require any API key.
+
+```bash
+# Use rule-based buyer (deterministic, no LLM call)
+prime eval run salesbench/salesbench -m openai/gpt-4.1-mini -n 1 -r 1 \
+  -a '{"buyer_policy": "rule_based"}'
+
+# Use LLM buyer via OpenAI directly (default)
+prime eval run salesbench/salesbench -m openai/gpt-4.1-mini -n 1 -r 1
+
+# Use LLM buyer via PrimeIntellect proxy
+prime eval run salesbench/salesbench -m openai/gpt-4.1-mini -n 1 -r 1 \
+  -a '{"buyer_model": "openai/gpt-4.1-nano", "buyer_base_url": "https://api.pinference.ai/api/v1", "buyer_api_key_var": "PRIME_API_KEY"}'
+```
+
 ## Scoring
 
 The primary reward is **total converted MRR** — the sum of monthly premiums from all successful sales. Additional metrics are tracked but not weighted into the score:

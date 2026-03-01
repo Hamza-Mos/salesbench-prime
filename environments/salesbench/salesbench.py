@@ -67,7 +67,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         )
 
         for tool in ALL_TOOLS:
-            self.add_tool(tool, args_to_skip=["runtime"])
+            self.add_tool(tool, args_to_skip=["runtime", "messages"])
 
     async def setup_state(self, state: vf.State) -> vf.State:
         input_data = state.get("input", {})
@@ -123,6 +123,8 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
 
         updated = dict(tool_args)
         updated["runtime"] = runtime
+        if tool_name == "calling_propose_offer":
+            updated["messages"] = messages
         return updated
 
     @vf.stop
@@ -157,6 +159,10 @@ def load_environment(
     num_leads: int = 100,
     work_days: int = 10,
     hours_per_day: int = 8,
+    buyer_policy: str = "llm",
+    buyer_model: str = "openai/gpt-4.1-nano",
+    buyer_base_url: str = "https://api.openai.com/v1",
+    buyer_api_key_var: str = "OPENAI_API_KEY",
     # Large guardrail to emulate legacy safety_max_turns=None default.
     max_turns: int = 10_000,
     max_examples: int = -1,
@@ -172,6 +178,10 @@ def load_environment(
         num_leads: Baseline leads per episode (curriculum scales around this).
         work_days: Simulated work days in an episode.
         hours_per_day: Simulated working hours per day.
+        buyer_policy: Buyer model type — "llm" (default) or "rule_based".
+        buyer_model: LLM model identifier for the buyer (used when buyer_policy="llm").
+        buyer_base_url: Base URL for the buyer LLM API.
+        buyer_api_key_var: Environment variable name for the buyer LLM API key.
         max_turns: Safety cap on rollout turns.
         max_examples: Optional cap after dataset construction.
     """
@@ -185,6 +195,10 @@ def load_environment(
         base_num_leads=num_leads,
         work_days=work_days,
         hours_per_day=hours_per_day,
+        buyer_policy=buyer_policy,
+        buyer_model=buyer_model,
+        buyer_base_url=buyer_base_url,
+        buyer_api_key_var=buyer_api_key_var,
     )
 
     eval_split = "eval" if split == "train" else split
@@ -195,6 +209,10 @@ def load_environment(
         base_num_leads=num_leads,
         work_days=work_days,
         hours_per_day=hours_per_day,
+        buyer_policy=buyer_policy,
+        buyer_model=buyer_model,
+        buyer_base_url=buyer_base_url,
+        buyer_api_key_var=buyer_api_key_var,
     )
 
     if max_examples > 0:

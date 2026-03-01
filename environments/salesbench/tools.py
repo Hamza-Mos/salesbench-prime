@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from typing import Any
 
 from runtime import RuntimeActionError, SalesEpisodeRuntime
@@ -24,6 +24,25 @@ def _safe_tool_call(
     runtime.register_tool_call(tool_name)
     try:
         data = fn()
+        return _as_json({"ok": True, **data})
+    except RuntimeActionError as exc:
+        logger.warning("Invalid action in %s: %s", tool_name, exc)
+        runtime.record_invalid_action(str(exc))
+        return _as_json({"ok": False, "error": str(exc)})
+    except Exception as exc:  # pragma: no cover - defensive boundary
+        logger.warning("Unexpected error in %s: %s", tool_name, exc)
+        runtime.record_invalid_action(f"unexpected error: {exc}")
+        return _as_json({"ok": False, "error": f"unexpected error: {exc}"})
+
+
+async def _safe_tool_call_async(
+    runtime: SalesEpisodeRuntime,
+    tool_name: str,
+    coro: Coroutine[Any, Any, dict[str, Any]],
+) -> str:
+    runtime.register_tool_call(tool_name)
+    try:
+        data = await coro
         return _as_json({"ok": True, **data})
     except RuntimeActionError as exc:
         logger.warning("Invalid action in %s: %s", tool_name, exc)
@@ -141,18 +160,20 @@ async def calling_propose_offer(
     monthly_premium: float,
     next_step: str,
     term_years: int | None = None,
+    messages: list | None = None,
 ) -> str:
     """Propose an offer to the active buyer and receive a decision."""
 
-    return _safe_tool_call(
+    return await _safe_tool_call_async(
         runtime,
         "calling_propose_offer",
-        lambda: runtime.propose_offer(
+        runtime.propose_offer(
             plan_type=plan_type,
             coverage_amount=coverage_amount,
             monthly_premium=monthly_premium,
             next_step=next_step,
             term_years=term_years,
+            messages=messages,
         ),
     )
 

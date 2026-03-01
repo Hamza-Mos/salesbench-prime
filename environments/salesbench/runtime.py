@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from catalog import ProductCatalog
@@ -19,7 +20,7 @@ from models import (
     Offer,
     PlanType,
 )
-from policy import BuyerPolicy
+from policy import LLMBuyerPolicy, RuleBasedBuyerPolicy
 
 logger = logging.getLogger("salesbench")
 
@@ -35,7 +36,14 @@ class SalesEpisodeRuntime:
         config.validate()
         self.config = config
         self.catalog = ProductCatalog()
-        self.policy = BuyerPolicy(seed=config.seed + 17)
+        if config.buyer_policy == "llm":
+            self.policy: RuleBasedBuyerPolicy | LLMBuyerPolicy = LLMBuyerPolicy(
+                model=config.buyer_model,
+                base_url=config.buyer_base_url,
+                api_key=os.getenv(config.buyer_api_key_var, ""),
+            )
+        else:
+            self.policy = RuleBasedBuyerPolicy(seed=config.seed + 17)
 
         leads = LeadGenerator(seed=config.seed).generate(config.num_leads)
         self.leads: dict[str, Lead] = {lead.lead_id: lead for lead in leads}
@@ -303,7 +311,7 @@ class SalesEpisodeRuntime:
         quote["premium_to_budget_ratio"] = round(affordability_ratio, 3)
         return {"quote": quote}
 
-    def propose_offer(
+    async def propose_offer(
         self,
         *,
         plan_type: str,
@@ -311,6 +319,7 @@ class SalesEpisodeRuntime:
         monthly_premium: float,
         next_step: str,
         term_years: int | None,
+        messages: list | None = None,
     ) -> dict[str, Any]:
         self._raise_if_done()
         if self.active_call is None:
@@ -335,7 +344,13 @@ class SalesEpisodeRuntime:
         self.active_call.offers.append(offer)
         self.stats.offers_proposed += 1
         self._advance(self.config.tool_costs.propose_offer_minutes, "propose_offer")
-        decision = self.policy.evaluate_offer(lead=lead, offer=offer)
+
+        if isinstance(self.policy, LLMBuyerPolicy):
+            decision = await self.policy.evaluate_offer(
+                lead=lead, offer=offer, messages=messages
+            )
+        else:
+            decision = self.policy.evaluate_offer(lead=lead, offer=offer)
         logger.debug(
             "Offer proposed: lead=%s plan=%s premium=%.2f decision=%s",
             lead.lead_id,
