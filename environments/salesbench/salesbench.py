@@ -132,9 +132,11 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
             return True
         if not isinstance(runtime, SalesEpisodeRuntime):
             return True
-        if runtime.done and "episode_summary" not in state:
-            summary = runtime.export_summary()
-            state["episode_summary"] = summary
+        # Always update the summary so it captures the latest state,
+        # even when the episode ends via no_tools_called rather than runtime.done.
+        summary = runtime.export_summary()
+        state["episode_summary"] = summary
+        if runtime.done:
             logger.info(
                 "Episode complete: reason=%s conversions=%d mrr=%.2f calls=%d leads_contacted=%d",
                 summary.get("termination_reason"),
