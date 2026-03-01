@@ -38,7 +38,7 @@ ENDPOINTS = {
         "key": "PRIME_API_KEY",
     },
     "opus": {
-        "model": "anthropic/claude-opus-4.5",
+        "model": "anthropic/claude-opus-4.6",
         "url": "https://api.pinference.ai/api/v1",
         "key": "PRIME_API_KEY",
     },

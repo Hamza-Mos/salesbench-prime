@@ -8,7 +8,7 @@ rollouts_per_example = 8
 env_file = ["secrets.env"]
 
 [sampling]
-max_tokens = 2048
+max_tokens = 8192
 temperature = 0.2
 
 [[env]]

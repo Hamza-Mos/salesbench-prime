@@ -228,7 +228,11 @@ class LLMBuyerPolicy:
                 role = msg.get("role", "")
                 content = msg.get("content", "")
                 if role in ("user", "assistant") and content:
-                    llm_messages.append({"role": role, "content": str(content)})
+                    # Flip roles: in the framework "assistant" = agent, "user" = buyer.
+                    # For the buyer LLM, the agent's words are "user" input and
+                    # the buyer's own prior words are "assistant" output.
+                    buyer_role = "user" if role == "assistant" else "assistant"
+                    llm_messages.append({"role": buyer_role, "content": str(content)})
 
         llm_messages.append({"role": "user", "content": offer_description})
 
@@ -237,12 +241,15 @@ class LLMBuyerPolicy:
                 model=self.model,
                 messages=llm_messages,
                 temperature=1.0,
-                max_completion_tokens=256,
+                max_completion_tokens=4096,
                 response_format={"type": "json_object"},
             )
             raw = response.choices[0].message.content or "{}"
         except Exception as exc:
             raise RuntimeActionError(f"buyer LLM API error: {exc}") from exc
+
+        logger.debug("buyer LLM raw response: %s", raw[:500])
+
         try:
             parsed = json.loads(raw)
         except json.JSONDecodeError as exc:
@@ -298,7 +305,8 @@ class LLMBuyerPolicy:
                 role = msg.get("role", "")
                 content = msg.get("content", "")
                 if role in ("user", "assistant") and content:
-                    llm_messages.append({"role": role, "content": str(content)})
+                    buyer_role = "user" if role == "assistant" else "assistant"
+                    llm_messages.append({"role": buyer_role, "content": str(content)})
 
         llm_messages.append({"role": "user", "content": agent_message})
 
@@ -307,10 +315,11 @@ class LLMBuyerPolicy:
                 model=self.model,
                 messages=llm_messages,
                 temperature=1.0,
-                max_completion_tokens=128,
+                max_completion_tokens=4096,
             )
             raw = response.choices[0].message.content or ""
         except Exception as exc:
             raise RuntimeActionError(f"buyer LLM API error: {exc}") from exc
 
+        logger.debug("buyer LLM conversation response: %s", raw[:500])
         return raw.strip() or "I'm listening."
