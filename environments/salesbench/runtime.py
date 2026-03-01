@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from catalog import ProductCatalog
@@ -19,6 +20,8 @@ from models import (
     PlanType,
 )
 from policy import BuyerPolicy
+
+logger = logging.getLogger("salesbench")
 
 
 class RuntimeActionError(ValueError):
@@ -48,10 +51,17 @@ class SalesEpisodeRuntime:
 
         self._call_counter = 0
         self._callback_counter = 0
+        self._contacted_leads: set[str] = set()
         self.event_log: list[str] = []
 
         self._record_event(
             f"episode_started seed={config.seed} leads={config.num_leads} budget={config.max_minutes}m"
+        )
+        logger.info(
+            "Episode started: seed=%d leads=%d budget=%dm",
+            config.seed,
+            config.num_leads,
+            config.max_minutes,
         )
 
     @property
@@ -65,10 +75,12 @@ class SalesEpisodeRuntime:
     def register_tool_call(self, tool_name: str) -> None:
         self.stats.tool_calls += 1
         self._record_event(f"tool={tool_name}")
+        logger.debug("tool_call=%s total=%d", tool_name, self.stats.tool_calls)
 
     def record_invalid_action(self, message: str) -> None:
         self.stats.invalid_actions += 1
         self._record_event(f"invalid_action={message}")
+        logger.warning("Invalid action (%d total): %s", self.stats.invalid_actions, message)
         self._check_termination()
 
     def search_leads(
@@ -185,6 +197,13 @@ class SalesEpisodeRuntime:
             reason=reason.strip(),
         )
         self.callbacks[callback_id] = callback
+        self.stats.callbacks_scheduled += 1
+        logger.debug(
+            "Callback scheduled: %s for lead=%s due_minute=%d",
+            callback_id,
+            lead_id,
+            due_minute,
+        )
         self._advance(self.config.tool_costs.schedule_callback_minutes, "schedule_callback")
         return {
             "callback": callback.to_dict(),
@@ -239,8 +258,18 @@ class SalesEpisodeRuntime:
         self.active_call = session
         lead.call_count += 1
         self.stats.calls_started += 1
+        if lead_id not in self._contacted_leads:
+            self._contacted_leads.add(lead_id)
+            self.stats.leads_contacted += 1
         self._mark_due_callbacks_completed(lead_id=lead_id)
         self._advance(self.config.tool_costs.start_call_minutes, "start_call")
+        logger.debug(
+            "Call started: %s lead=%s (%s) minute=%d",
+            call_id,
+            lead_id,
+            lead.full_name,
+            session.started_minute,
+        )
 
         return {
             "call_id": session.call_id,
@@ -304,8 +333,16 @@ class SalesEpisodeRuntime:
         )
 
         self.active_call.offers.append(offer)
+        self.stats.offers_proposed += 1
         self._advance(self.config.tool_costs.propose_offer_minutes, "propose_offer")
         decision = self.policy.evaluate_offer(lead=lead, offer=offer)
+        logger.debug(
+            "Offer proposed: lead=%s plan=%s premium=%.2f decision=%s",
+            lead.lead_id,
+            plan.value,
+            monthly_premium,
+            decision.decision.value,
+        )
 
         response: dict[str, Any] = {
             "offer": offer.to_dict(),
@@ -317,8 +354,15 @@ class SalesEpisodeRuntime:
             lead.accepted_offer = offer
             self.active_call.outcome = BuyerDecision.ACCEPT
             self.stats.conversions += 1
+            self.stats.offers_accepted += 1
             self.stats.revenue_mrr += offer.monthly_premium
             response["message"] = "Buyer accepted. End the call to finalize the conversion."
+            logger.info(
+                "Conversion: lead=%s premium=%.2f total_mrr=%.2f",
+                lead.lead_id,
+                offer.monthly_premium,
+                self.stats.revenue_mrr,
+            )
 
         elif decision.decision == BuyerDecision.REJECT:
             self.stats.rejected_offers += 1
@@ -332,6 +376,7 @@ class SalesEpisodeRuntime:
                 lead.status = LeadStatus.DNC
                 lead.do_not_call = True
                 response["message"] += " Do-not-call requested."
+                logger.debug("Lead %s marked DNC after hang-up", lead.lead_id)
             self._finalize_active_call(reason="buyer_hang_up")
 
         self._check_termination()
@@ -378,10 +423,47 @@ class SalesEpisodeRuntime:
 
     def export_summary(self) -> dict[str, Any]:
         converted = [lead for lead in self.leads.values() if lead.status == LeadStatus.CONVERTED]
+
+        status_counts: dict[str, int] = {}
+        for lead in self.leads.values():
+            status_counts.setdefault(lead.status.value, 0)
+            status_counts[lead.status.value] += 1
+
+        calls_detail = []
+        for session in self.call_history:
+            lead = self.leads.get(session.lead_id)
+            revenue = 0.0
+            if lead and lead.accepted_offer and session.outcome == BuyerDecision.ACCEPT:
+                revenue = lead.accepted_offer.monthly_premium
+            calls_detail.append(
+                {
+                    "call_id": session.call_id,
+                    "lead_id": session.lead_id,
+                    "lead_name": lead.full_name if lead else "unknown",
+                    "started_minute": session.started_minute,
+                    "ended_minute": session.ended_minute,
+                    "duration_minutes": session.duration_minutes,
+                    "offers_made": len(session.offers),
+                    "outcome": session.outcome.value if session.outcome else None,
+                    "revenue": round(revenue, 2),
+                }
+            )
+
         return {
-            "snapshot": self.state_snapshot(),
+            "termination_reason": self.termination_reason,
+            "time_used_minutes": self.current_minute,
+            "time_budget_minutes": self.config.max_minutes,
+            "funnel": {
+                "total_leads": len(self.leads),
+                "leads_contacted": self.stats.leads_contacted,
+                "leads_converted": status_counts.get("converted", 0),
+                "leads_dnc": status_counts.get("dnc", 0),
+                "leads_exhausted": status_counts.get("exhausted", 0),
+                "leads_remaining": status_counts.get("active", 0),
+            },
+            "calls": calls_detail,
+            "stats": self.stats.to_dict(),
             "converted_leads": [lead.to_detail_dict() for lead in converted],
-            "call_history": [session.to_dict() for session in self.call_history],
         }
 
     def _raise_if_done(self) -> None:
@@ -417,6 +499,8 @@ class SalesEpisodeRuntime:
                 continue
             if task.due_minute <= self.current_minute:
                 task.status = CallbackStatus.COMPLETED
+                self.stats.callbacks_completed += 1
+                logger.debug("Callback completed: %s lead=%s", task.callback_id, lead_id)
 
     def _finalize_active_call(self, *, reason: str) -> CallSession:
         assert self.active_call is not None
@@ -437,16 +521,19 @@ class SalesEpisodeRuntime:
             self.done = True
             self.termination_reason = "time_budget_exhausted"
             self._record_event("episode_done=time_budget_exhausted")
+            logger.info("Episode terminated: time_budget_exhausted at minute %d", self.current_minute)
             return
         if self.stats.invalid_actions >= self.config.max_invalid_actions:
             self.done = True
             self.termination_reason = "invalid_action_limit_reached"
             self._record_event("episode_done=invalid_action_limit_reached")
+            logger.info("Episode terminated: invalid_action_limit_reached (%d)", self.stats.invalid_actions)
             return
         if self.num_active_leads == 0 and self.active_call is None:
             self.done = True
             self.termination_reason = "pipeline_exhausted"
             self._record_event("episode_done=pipeline_exhausted")
+            logger.info("Episode terminated: pipeline_exhausted")
 
     def _record_event(self, event: str) -> None:
         self.event_log.append(event)

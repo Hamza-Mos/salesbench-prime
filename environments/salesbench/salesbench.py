@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from datasets import Dataset
@@ -11,6 +12,8 @@ from dataset import build_salesbench_dataset
 from rewards import RUBRIC_FUNCS, RUBRIC_WEIGHTS
 from runtime import SalesEpisodeRuntime
 from tools import ALL_TOOLS
+
+logger = logging.getLogger("salesbench")
 
 SYSTEM_PROMPT = """
 You are a sales agent operating a structured insurance pipeline.
@@ -83,6 +86,12 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         state["runtime"] = runtime
         state["episode_config"] = config.to_dict()
         state["episode_seed"] = config.seed
+        logger.info(
+            "setup_state: seed=%d leads=%d budget=%dm",
+            config.seed,
+            config.num_leads,
+            config.max_minutes,
+        )
 
         briefing = runtime.render_briefing()
         prompt = state.get("prompt")
@@ -123,6 +132,17 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
             return True
         if not isinstance(runtime, SalesEpisodeRuntime):
             return True
+        if runtime.done and "episode_summary" not in state:
+            summary = runtime.export_summary()
+            state["episode_summary"] = summary
+            logger.info(
+                "Episode complete: reason=%s conversions=%d mrr=%.2f calls=%d leads_contacted=%d",
+                summary.get("termination_reason"),
+                summary["stats"]["conversions"],
+                summary["stats"]["revenue_mrr"],
+                summary["stats"]["calls_started"],
+                summary["stats"]["leads_contacted"],
+            )
         return runtime.done
 
 

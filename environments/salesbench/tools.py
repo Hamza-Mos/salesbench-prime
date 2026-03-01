@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from typing import Any
 
 from runtime import RuntimeActionError, SalesEpisodeRuntime
+
+logger = logging.getLogger("salesbench")
 
 
 def _as_json(payload: dict[str, Any]) -> str:
@@ -23,9 +26,11 @@ def _safe_tool_call(
         data = fn()
         return _as_json({"ok": True, **data})
     except RuntimeActionError as exc:
+        logger.warning("Invalid action in %s: %s", tool_name, exc)
         runtime.record_invalid_action(str(exc))
         return _as_json({"ok": False, "error": str(exc)})
     except Exception as exc:  # pragma: no cover - defensive boundary
+        logger.warning("Unexpected error in %s: %s", tool_name, exc)
         runtime.record_invalid_action(f"unexpected error: {exc}")
         return _as_json({"ok": False, "error": f"unexpected error: {exc}"})
 

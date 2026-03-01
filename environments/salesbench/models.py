@@ -185,6 +185,11 @@ class EpisodeStats:
     hang_ups: int = 0
     dnc_violations: int = 0
     revenue_mrr: float = 0.0
+    offers_proposed: int = 0
+    offers_accepted: int = 0
+    leads_contacted: int = 0
+    callbacks_scheduled: int = 0
+    callbacks_completed: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -197,4 +202,9 @@ class EpisodeStats:
             "hang_ups": self.hang_ups,
             "dnc_violations": self.dnc_violations,
             "revenue_mrr": round(self.revenue_mrr, 2),
+            "offers_proposed": self.offers_proposed,
+            "offers_accepted": self.offers_accepted,
+            "leads_contacted": self.leads_contacted,
+            "callbacks_scheduled": self.callbacks_scheduled,
+            "callbacks_completed": self.callbacks_completed,
         }
