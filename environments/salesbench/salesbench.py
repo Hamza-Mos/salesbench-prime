@@ -22,7 +22,9 @@ Core objective:
 - Maximize converted monthly premium while staying compliant and efficient.
 
 Execution rules:
-- Use tools every turn. Do not hallucinate lead data or prices.
+- During an active call, speak directly to the buyer. They will respond.
+- Use tools for pipeline actions (search, quote, propose, end call). Speak naturally for conversation.
+- Do not hallucinate lead data or prices — use CRM and quote tools.
 - Verify lead profile before making a proposal.
 - Start exactly one active call at a time.
 - End calls explicitly when done.
@@ -48,6 +50,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         default_work_days: int,
         default_hours_per_day: int,
         max_turns: int,
+        system_prompt: str | None = None,
         **kwargs: Any,
     ) -> None:
         self.default_seed = default_seed
@@ -62,7 +65,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
             tools=[],
             max_turns=max_turns,
             rubric=rubric,
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=system_prompt or SYSTEM_PROMPT,
             **kwargs,
         )
 
@@ -127,6 +130,41 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
             updated["messages"] = messages
         return updated
 
+    async def env_response(self, messages, state, **kwargs):
+        last_msg = messages[-1] if messages else {}
+        has_tools = "tool_calls" in last_msg and last_msg.get("tool_calls") is not None
+
+        if has_tools:
+            return await super().env_response(messages, state, **kwargs)
+
+        # Plain text from agent — inject buyer response if in a call
+        runtime = state.get("runtime")
+        if runtime and not runtime.done and runtime.active_call:
+            agent_text = str(last_msg.get("content", "")).strip()
+            if agent_text:
+                buyer_reply = await runtime.conversation_turn(
+                    agent_text=agent_text, messages=messages
+                )
+                if buyer_reply:
+                    return [{"role": "user", "content": buyer_reply}]
+        return []
+
+    @vf.stop
+    async def no_tools_called(self, state):
+        if len(state["trajectory"]) == 0:
+            return False
+        last_message = state["trajectory"][-1]["completion"][-1]
+        is_assistant = last_message["role"] == "assistant"
+        no_tool_calls = (
+            "tool_calls" not in last_message or last_message["tool_calls"] is None
+        )
+        if is_assistant and no_tool_calls:
+            runtime = state.get("runtime")
+            if runtime and runtime.active_call and not runtime.done:
+                return False  # keep conversation going
+            return True
+        return False
+
     @vf.stop
     async def episode_done(self, state: vf.State) -> bool:
         runtime = state.get("runtime")
@@ -160,12 +198,14 @@ def load_environment(
     work_days: int = 10,
     hours_per_day: int = 8,
     buyer_policy: str = "llm",
-    buyer_model: str = "openai/gpt-4.1-nano",
+    buyer_model: str = "openai/gpt-5-mini",
     buyer_base_url: str = "https://api.openai.com/v1",
     buyer_api_key_var: str = "OPENAI_API_KEY",
+    difficulty: str = "custom",
     # Large guardrail to emulate legacy safety_max_turns=None default.
     max_turns: int = 10_000,
     max_examples: int = -1,
+    system_prompt: str | None = None,
 ) -> vf.Environment:
     """Entry-point for Prime verifiers/Prime Lab.
 
@@ -182,11 +222,21 @@ def load_environment(
         buyer_model: LLM model identifier for the buyer (used when buyer_policy="llm").
         buyer_base_url: Base URL for the buyer LLM API.
         buyer_api_key_var: Environment variable name for the buyer LLM API key.
+        difficulty: Difficulty tier — "easy", "medium", "hard", or "custom" (default).
         max_turns: Safety cap on rollout turns.
         max_examples: Optional cap after dataset construction.
     """
 
     resolved_seed = base_seed if seed is None else seed
+
+    if buyer_policy == "llm":
+        import os
+
+        if not os.environ.get(buyer_api_key_var, ""):
+            raise ValueError(
+                f"LLM buyer requires '{buyer_api_key_var}' env var. "
+                f"Set it: export {buyer_api_key_var}=<key>"
+            )
 
     dataset = build_salesbench_dataset(
         split=split,
@@ -199,6 +249,7 @@ def load_environment(
         buyer_model=buyer_model,
         buyer_base_url=buyer_base_url,
         buyer_api_key_var=buyer_api_key_var,
+        difficulty=difficulty,
     )
 
     eval_split = "eval" if split == "train" else split
@@ -213,6 +264,7 @@ def load_environment(
         buyer_model=buyer_model,
         buyer_base_url=buyer_base_url,
         buyer_api_key_var=buyer_api_key_var,
+        difficulty=difficulty,
     )
 
     if max_examples > 0:
@@ -227,4 +279,5 @@ def load_environment(
         default_work_days=work_days,
         default_hours_per_day=hours_per_day,
         max_turns=max_turns,
+        system_prompt=system_prompt,
     )

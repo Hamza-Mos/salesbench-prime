@@ -9,7 +9,7 @@ from typing import Any
 
 import openai
 
-from models import BuyerDecision, DecisionResult, Lead, Offer, PlanType
+from models import BuyerDecision, DecisionResult, Lead, Offer, PlanType, RuntimeActionError
 
 logger = logging.getLogger("salesbench")
 
@@ -94,6 +94,36 @@ class RuleBasedBuyerPolicy:
             return min(1.0, 0.40 + lead.latent_need * 0.60)
         return 0.50
 
+    def generate_response(
+        self, *, lead: Lead, agent_message: str, **kwargs: Any
+    ) -> str:
+        """Return a canned buyer response based on lead attributes."""
+        if lead.price_sensitivity > 0.7:
+            options = [
+                "How much would that cost me monthly?",
+                "I'm pretty careful with my budget right now.",
+                "What's the cheapest option you have?",
+            ]
+        elif lead.latent_need > 0.7:
+            options = [
+                "Tell me more about the coverage options.",
+                "I've been thinking about getting something like this.",
+                "What would you recommend for someone in my situation?",
+            ]
+        elif lead.trust_level < 0.4:
+            options = [
+                "I'm not sure I'm interested.",
+                "Can you send me something in writing first?",
+                "I'll need to think about it.",
+            ]
+        else:
+            options = [
+                "Okay, what do you have in mind?",
+                "I'm listening.",
+                "Go ahead, I've got a few minutes.",
+            ]
+        return self._rng.choice(options)
+
 
 _LLM_BUYER_SYSTEM = """\
 You are a prospective insurance buyer in a simulated sales call. Your job is to \
@@ -125,6 +155,35 @@ Respond with a JSON object (no markdown, no extra text):
 
 Set request_dnc to true only if you are hanging up AND want to be placed on a do-not-call list \
 (e.g. too many calls, feeling harassed).
+"""
+
+
+_LLM_BUYER_CONVERSATION_SYSTEM = """\
+You are a prospective insurance buyer in a simulated sales call. You are having \
+a conversation with a sales agent. Respond naturally as a real buyer would.
+
+## Your Profile
+- Name: {name}
+- Age: {age}
+- Annual income: ${income:,}
+- Household size: {household} ({dependents} dependents)
+- Risk class: {risk_class}
+- Monthly budget for insurance: ${budget:.2f}
+- Need for insurance (0-1): {need:.2f}
+- Trust level toward sales agents (0-1): {trust:.2f}
+- Price sensitivity (0-1): {price_sensitivity:.2f}
+- Times contacted so far: {call_count} (max tolerance: {max_calls})
+
+## Conversation guidelines
+- Respond naturally: ask questions, share concerns, express interest or skepticism.
+- Stay in character based on your profile attributes.
+- Keep responses to 1-3 sentences.
+- Do NOT make a purchase decision in this response. Purchase decisions happen \
+only when the agent formally proposes an offer.
+- If trust is low, be guarded. If need is high, show interest. If price-sensitive, \
+ask about costs.
+
+Respond with plain text only (no JSON, no markdown).
 """
 
 
@@ -173,15 +232,21 @@ class LLMBuyerPolicy:
 
         llm_messages.append({"role": "user", "content": offer_description})
 
-        response = await self.client.chat.completions.create(
-            model=self.model,
-            messages=llm_messages,
-            temperature=0.7,
-            max_tokens=256,
-            response_format={"type": "json_object"},
-        )
-        raw = response.choices[0].message.content or "{}"
-        parsed = json.loads(raw)
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=llm_messages,
+                temperature=0.7,
+                max_tokens=256,
+                response_format={"type": "json_object"},
+            )
+            raw = response.choices[0].message.content or "{}"
+        except Exception as exc:
+            raise RuntimeActionError(f"buyer LLM API error: {exc}") from exc
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise RuntimeActionError(f"buyer LLM returned invalid JSON: {raw[:200]}") from exc
 
         decision_str = parsed.get("decision", "reject").lower()
         reason = parsed.get("reason", "No reason provided.")
@@ -206,3 +271,46 @@ class LLMBuyerPolicy:
             score=score_map[decision],
             request_dnc=request_dnc,
         )
+
+    async def generate_response(
+        self, *, lead: Lead, agent_message: str, messages: list | None = None
+    ) -> str:
+        """Call LLM to generate a conversational buyer response."""
+        system_prompt = _LLM_BUYER_CONVERSATION_SYSTEM.format(
+            name=lead.full_name,
+            age=lead.age,
+            income=lead.annual_income,
+            household=lead.household_size,
+            dependents=lead.dependents,
+            risk_class=lead.risk_class.value,
+            budget=lead.budget_monthly,
+            need=lead.latent_need,
+            trust=lead.trust_level,
+            price_sensitivity=lead.price_sensitivity,
+            call_count=lead.call_count,
+            max_calls=lead.max_calls,
+        )
+
+        llm_messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
+
+        if messages:
+            for msg in messages:
+                role = msg.get("role", "")
+                content = msg.get("content", "")
+                if role in ("user", "assistant") and content:
+                    llm_messages.append({"role": role, "content": str(content)})
+
+        llm_messages.append({"role": "user", "content": agent_message})
+
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=llm_messages,
+                temperature=0.7,
+                max_tokens=128,
+            )
+            raw = response.choices[0].message.content or ""
+        except Exception as exc:
+            raise RuntimeActionError(f"buyer LLM API error: {exc}") from exc
+
+        return raw.strip() or "I'm listening."

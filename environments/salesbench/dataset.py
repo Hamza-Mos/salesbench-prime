@@ -20,9 +20,10 @@ def build_salesbench_dataset(
     work_days: int,
     hours_per_day: int,
     buyer_policy: str = "llm",
-    buyer_model: str = "openai/gpt-4.1-nano",
+    buyer_model: str = "openai/gpt-5-mini",
     buyer_base_url: str = "https://api.openai.com/v1",
     buyer_api_key_var: str = "OPENAI_API_KEY",
+    difficulty: str = "custom",
 ) -> Dataset:
     """Build a deterministic HuggingFace `Dataset` for verifiers rollouts.
 
@@ -52,6 +53,7 @@ def build_salesbench_dataset(
                 "buyer_model": buyer_model,
                 "buyer_base_url": buyer_base_url,
                 "buyer_api_key_var": buyer_api_key_var,
+                "difficulty": difficulty,
             }
         )
 

@@ -16,5 +16,6 @@ environments/*/.prime/
 environments/*/.prime/*
 
 .venv/
+**/uv.lock
 
 .env

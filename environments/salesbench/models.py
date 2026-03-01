@@ -7,6 +7,10 @@ from enum import Enum
 from typing import Any
 
 
+class RuntimeActionError(ValueError):
+    """Raised when the agent attempts an invalid runtime action."""
+
+
 class LeadStatus(str, Enum):
     ACTIVE = "active"
     CONVERTED = "converted"
@@ -152,6 +156,7 @@ class CallSession:
     started_minute: int
     offers: list[Offer] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    messages_sent: int = 0
     ended_minute: int | None = None
     outcome: BuyerDecision | None = None
 
@@ -168,6 +173,7 @@ class CallSession:
             "started_minute": self.started_minute,
             "ended_minute": self.ended_minute,
             "duration_minutes": self.duration_minutes,
+            "messages_sent": self.messages_sent,
             "offers": [offer.to_dict() for offer in self.offers],
             "notes": self.notes,
             "outcome": self.outcome.value if self.outcome else None,

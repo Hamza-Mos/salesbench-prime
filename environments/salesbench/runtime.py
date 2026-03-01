@@ -19,14 +19,11 @@ from models import (
     LeadStatus,
     Offer,
     PlanType,
+    RuntimeActionError,
 )
 from policy import LLMBuyerPolicy, RuleBasedBuyerPolicy
 
 logger = logging.getLogger("salesbench")
-
-
-class RuntimeActionError(ValueError):
-    """Raised when the agent attempts an invalid runtime action."""
 
 
 class SalesEpisodeRuntime:
@@ -45,9 +42,12 @@ class SalesEpisodeRuntime:
         else:
             self.policy = RuleBasedBuyerPolicy(seed=config.seed + 17)
 
-        leads = LeadGenerator(seed=config.seed).generate(config.num_leads)
+        leads = LeadGenerator(seed=config.seed, difficulty=config.difficulty).generate(
+            config.num_leads
+        )
         self.leads: dict[str, Lead] = {lead.lead_id: lead for lead in leads}
 
+        self.max_achievable_mrr = sum(lead.budget_monthly for lead in leads)
         self.stats = EpisodeStats()
         self.current_minute = 0
         self.done = False
@@ -265,6 +265,8 @@ class SalesEpisodeRuntime:
         )
         self.active_call = session
         lead.call_count += 1
+        if lead.call_count >= lead.max_calls and lead.status == LeadStatus.ACTIVE:
+            lead.status = LeadStatus.EXHAUSTED
         self.stats.calls_started += 1
         if lead_id not in self._contacted_leads:
             self._contacted_leads.add(lead_id)
@@ -297,19 +299,49 @@ class SalesEpisodeRuntime:
         lead = self._get_lead_or_error(lead_id)
         plan = self._parse_plan_type(plan_type)
 
-        quote = self.catalog.quote(
-            plan_type=plan,
-            age=lead.age,
-            coverage_amount=coverage_amount,
-            risk_class=lead.risk_class,
-            term_years=term_years,
-        )
+        try:
+            quote = self.catalog.quote(
+                plan_type=plan,
+                age=lead.age,
+                coverage_amount=coverage_amount,
+                risk_class=lead.risk_class,
+                term_years=term_years,
+            )
+        except ValueError as exc:
+            raise RuntimeActionError(str(exc)) from exc
         self._advance(self.config.tool_costs.quote_minutes, "quote_plan")
 
         affordability_ratio = quote["monthly_premium"] / max(lead.budget_monthly, 1.0)
         quote["lead_budget_monthly"] = round(lead.budget_monthly, 2)
         quote["premium_to_budget_ratio"] = round(affordability_ratio, 3)
         return {"quote": quote}
+
+    async def conversation_turn(
+        self, *, agent_text: str, messages: list | None = None
+    ) -> str | None:
+        """Process one agent->buyer conversation exchange. Returns buyer reply or None."""
+        if self.active_call is None or self.done:
+            return None
+        if not agent_text.strip():
+            return None
+
+        lead = self._get_lead_or_error(self.active_call.lead_id)
+        self._advance(self.config.tool_costs.send_message_minutes, "conversation")
+
+        if self.done:
+            return None  # time ran out during advance
+
+        if isinstance(self.policy, LLMBuyerPolicy):
+            buyer_reply = await self.policy.generate_response(
+                lead=lead, agent_message=agent_text, messages=messages
+            )
+        else:
+            buyer_reply = self.policy.generate_response(
+                lead=lead, agent_message=agent_text
+            )
+
+        self.active_call.messages_sent += 1
+        return buyer_reply
 
     async def propose_offer(
         self,
@@ -518,7 +550,8 @@ class SalesEpisodeRuntime:
                 logger.debug("Callback completed: %s lead=%s", task.callback_id, lead_id)
 
     def _finalize_active_call(self, *, reason: str) -> CallSession:
-        assert self.active_call is not None
+        if self.active_call is None:
+            raise RuntimeActionError("no active call to finalize")
         session = self.active_call
         session.ended_minute = self.current_minute
         if session.outcome is None:
@@ -529,18 +562,24 @@ class SalesEpisodeRuntime:
         self.stats.calls_completed += 1
         return session
 
+    def _finalize_if_active(self, reason: str) -> None:
+        if self.active_call is not None:
+            self._finalize_active_call(reason=reason)
+
     def _check_termination(self) -> None:
         if self.done:
             return
         if self.current_minute >= self.config.max_minutes:
             self.done = True
             self.termination_reason = "time_budget_exhausted"
+            self._finalize_if_active("time_budget_exhausted")
             self._record_event("episode_done=time_budget_exhausted")
             logger.info("Episode terminated: time_budget_exhausted at minute %d", self.current_minute)
             return
         if self.stats.invalid_actions >= self.config.max_invalid_actions:
             self.done = True
             self.termination_reason = "invalid_action_limit_reached"
+            self._finalize_if_active("invalid_action_limit_reached")
             self._record_event("episode_done=invalid_action_limit_reached")
             logger.info("Episode terminated: invalid_action_limit_reached (%d)", self.stats.invalid_actions)
             return
