@@ -222,6 +222,13 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
                 ]
         await super().render_completion(state)
 
+        # Workaround: verifiers <=0.1.10 eval_display crashes with
+        # TypeError when state["error"] is a dict (Rich Text.append
+        # only accepts str).  Stringify it so the TUI summary works.
+        err = state.get("error")
+        if isinstance(err, dict):
+            state["error"] = err.get("error_chain_str") or err.get("error", str(err))
+
     @staticmethod
     def _format_episode_summary(summary: dict) -> str:
         stats = summary.get("stats", {})
