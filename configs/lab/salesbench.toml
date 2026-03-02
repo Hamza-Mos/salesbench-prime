@@ -42,4 +42,4 @@ seed = 2026
 [wandb]
 project = "salesbench"
 name = "intellect3.1-salesbench-v1"
-entity = "salesbench"
+entity = "hamza-mos"
