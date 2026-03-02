@@ -26,6 +26,20 @@ from policy import LLMBuyerPolicy, RuleBasedBuyerPolicy
 logger = logging.getLogger("verifiers.salesbench")
 
 
+def _coerce_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() in ("true", "1", "yes")
+    return bool(value)
+
+
+def _require_str(value: Any, name: str) -> str:
+    if value is None:
+        raise RuntimeActionError(f"{name} is required")
+    return str(value).strip()
+
+
 class SalesEpisodeRuntime:
     """Canonical owner of per-episode state."""
 
@@ -102,6 +116,7 @@ class SalesEpisodeRuntime:
         include_called: bool,
     ) -> dict[str, Any]:
         self._raise_if_done()
+        include_called = _coerce_bool(include_called)
         # Coerce filter args — LLMs often pass strings instead of ints/floats.
         if min_income is not None:
             min_income = int(min_income)
@@ -148,10 +163,11 @@ class SalesEpisodeRuntime:
         return {"lead": lead.to_detail_dict()}
 
     def add_note(self, *, lead_id: str, note: str) -> dict[str, Any]:
-        if not note.strip():
+        note = _require_str(note, "note")
+        if not note:
             raise RuntimeActionError("note cannot be empty")
         lead = self._get_lead_or_error(lead_id)
-        lead.notes.append(note.strip())
+        lead.notes.append(note)
         return {
             "lead_id": lead_id,
             "note_count": len(lead.notes),
@@ -192,7 +208,8 @@ class SalesEpisodeRuntime:
             raise RuntimeActionError("cannot schedule callback for inactive or DNC lead")
         if hours_from_now <= 0:
             raise RuntimeActionError("hours_from_now must be > 0")
-        if not reason.strip():
+        reason = _require_str(reason, "reason")
+        if not reason:
             raise RuntimeActionError("reason cannot be empty")
 
         existing = [
@@ -213,7 +230,7 @@ class SalesEpisodeRuntime:
             callback_id=callback_id,
             lead_id=lead_id,
             due_minute=due_minute,
-            reason=reason.strip(),
+            reason=reason,
         )
         self.callbacks[callback_id] = callback
         self.stats.callbacks_scheduled += 1
@@ -236,6 +253,7 @@ class SalesEpisodeRuntime:
         include_completed: bool,
     ) -> dict[str, Any]:
         within_hours = int(within_hours)
+        include_completed = _coerce_bool(include_completed)
         if within_hours <= 0:
             raise RuntimeActionError("within_hours must be > 0")
 
@@ -377,20 +395,22 @@ class SalesEpisodeRuntime:
         self._raise_if_done()
         if self.active_call is None:
             raise RuntimeActionError("no active call")
+        lead = self._get_lead_or_error(self.active_call.lead_id)
+        if lead.status == LeadStatus.CONVERTED:
+            raise RuntimeActionError("lead is already converted")
+        next_step = _require_str(next_step, "next_step")
         if monthly_premium <= 0:
             raise RuntimeActionError("monthly_premium must be > 0")
         if coverage_amount <= 0:
             raise RuntimeActionError("coverage_amount must be > 0")
-        if not next_step.strip():
+        if not next_step:
             raise RuntimeActionError("next_step cannot be empty")
-
-        lead = self._get_lead_or_error(self.active_call.lead_id)
         plan = self._parse_plan_type(plan_type)
         offer = Offer(
             plan_type=plan,
             coverage_amount=coverage_amount,
             monthly_premium=round(monthly_premium, 2),
-            next_step=next_step.strip(),
+            next_step=next_step,
             term_years=term_years,
         )
 
@@ -465,15 +485,16 @@ class SalesEpisodeRuntime:
     def end_call(self, *, disposition: str) -> dict[str, Any]:
         if self.active_call is None:
             raise RuntimeActionError("no active call")
-        if not disposition.strip():
+        disposition = _require_str(disposition, "disposition")
+        if not disposition:
             raise RuntimeActionError("disposition cannot be empty")
 
         self._advance(self.config.tool_costs.end_call_minutes, "end_call")
-        call = self._finalize_active_call(reason=disposition.strip())
+        call = self._finalize_active_call(reason=disposition)
         self._check_termination()
         return {
             "call": call.to_dict(),
-            "disposition": disposition.strip(),
+            "disposition": disposition,
         }
 
     def render_briefing(self) -> str:
