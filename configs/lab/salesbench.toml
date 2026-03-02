@@ -42,4 +42,4 @@ seed = 2026
 [wandb]
 project = "salesbench"
 name = "intellect3-salesbench-v1"
-# entity = "your-team-name"  # fill in your W&B team/entity
+entity = "salesbench"
