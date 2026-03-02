@@ -101,6 +101,14 @@ class SalesEpisodeRuntime:
         include_called: bool,
     ) -> dict[str, Any]:
         self._raise_if_done()
+        # Coerce filter args — LLMs often pass strings instead of ints/floats.
+        if min_income is not None:
+            min_income = int(min_income)
+        if max_age is not None:
+            max_age = int(max_age)
+        if min_need is not None:
+            min_need = float(min_need)
+        limit = int(limit)
         if limit <= 0:
             raise RuntimeActionError("limit must be > 0")
 
@@ -175,6 +183,8 @@ class SalesEpisodeRuntime:
         hours_from_now: int,
         reason: str,
     ) -> dict[str, Any]:
+        # Coerce args — LLMs often pass strings instead of ints.
+        hours_from_now = int(hours_from_now)
         self._raise_if_done()
         lead = self._get_lead_or_error(lead_id)
         if lead.status != LeadStatus.ACTIVE or lead.do_not_call:
@@ -295,6 +305,10 @@ class SalesEpisodeRuntime:
         coverage_amount: int,
         term_years: int | None,
     ) -> dict[str, Any]:
+        # Coerce args — LLMs often pass strings instead of ints.
+        coverage_amount = int(coverage_amount)
+        if term_years is not None:
+            term_years = int(term_years)
         self._raise_if_done()
         lead = self._get_lead_or_error(lead_id)
         plan = self._parse_plan_type(plan_type)
@@ -353,6 +367,11 @@ class SalesEpisodeRuntime:
         term_years: int | None,
         messages: list | None = None,
     ) -> dict[str, Any]:
+        # Coerce args — LLMs often pass strings instead of ints/floats.
+        coverage_amount = int(coverage_amount)
+        monthly_premium = float(monthly_premium)
+        if term_years is not None:
+            term_years = int(term_years)
         self._raise_if_done()
         if self.active_call is None:
             raise RuntimeActionError("no active call")
