@@ -61,6 +61,7 @@ class SalesEpisodeRuntime:
         self._callback_counter = 0
         self._contacted_leads: set[str] = set()
         self.event_log: list[str] = []
+        self._pending_buyer_speech: str | None = None
 
         self._record_event(
             f"episode_started seed={config.seed} leads={config.num_leads} budget={config.max_minutes}m"
@@ -444,6 +445,9 @@ class SalesEpisodeRuntime:
                 response["message"] += " Do-not-call requested."
                 logger.debug("Lead %s marked DNC after hang-up", lead.lead_id)
             self._finalize_active_call(reason="buyer_hang_up")
+
+        # Store buyer's spoken response for conversation injection
+        self._pending_buyer_speech = f"[{lead.full_name} (buyer)]: {decision.reason}"
 
         self._check_termination()
         return response

@@ -141,7 +141,18 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         has_tools = "tool_calls" in last_msg and last_msg.get("tool_calls") is not None
 
         if has_tools:
-            return await super().env_response(messages, state, **kwargs)
+            tool_results = await super().env_response(messages, state, **kwargs)
+
+            # Inject buyer spoken response after propose_offer decisions
+            runtime = state.get("runtime")
+            if runtime and runtime._pending_buyer_speech:
+                speech = runtime._pending_buyer_speech
+                runtime._pending_buyer_speech = None
+                tool_results = list(tool_results) + [
+                    {"role": "user", "content": speech}
+                ]
+
+            return tool_results
 
         # Plain text from agent — inject buyer response if in a call
         runtime = state.get("runtime")
@@ -152,7 +163,9 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
                     agent_text=agent_text, messages=messages
                 )
                 if buyer_reply:
-                    return [{"role": "user", "content": buyer_reply}]
+                    lead = runtime.leads.get(runtime.active_call.lead_id)
+                    name = lead.full_name if lead else "Buyer"
+                    return [{"role": "user", "content": f"[{name} (buyer)]: {buyer_reply}"}]
         return []
 
     @vf.stop
@@ -170,6 +183,57 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
                 return False  # keep conversation going
             return True
         return False
+
+    async def render_completion(self, state):
+        """Override to inject episode summary as the final conversation message."""
+        if state.get("final_env_response") is None:
+            runtime = state.get("runtime")
+            if runtime:
+                summary = runtime.export_summary()
+                if not runtime.termination_reason:
+                    summary["termination_reason"] = state.get("stop_condition", "completed")
+                state["episode_summary"] = summary
+                state["final_env_response"] = [
+                    {"role": "user", "content": self._format_episode_summary(summary)}
+                ]
+        await super().render_completion(state)
+
+    @staticmethod
+    def _format_episode_summary(summary: dict) -> str:
+        stats = summary.get("stats", {})
+        funnel = summary.get("funnel", {})
+        time_used = summary.get("time_used_minutes", 0)
+        time_budget = summary.get("time_budget_minutes", 0)
+        reason = summary.get("termination_reason", "unknown")
+
+        mrr = stats.get("revenue_mrr", 0)
+        conversions = stats.get("conversions", 0)
+        total_leads = funnel.get("total_leads", 0)
+        calls = stats.get("calls_started", 0)
+        efficiency = (conversions / calls * 100) if calls > 0 else 0
+        mins_per_conv = (time_used / conversions) if conversions > 0 else 0
+
+        lines = [
+            "── Episode Summary ──",
+            f"Result: {reason} ({time_used}/{time_budget} min used)",
+            "",
+            f"Revenue MRR: ${mrr:.2f}",
+            f"Conversions: {conversions}/{total_leads} leads ({efficiency:.0f}% call efficiency)",
+            f"Minutes/conversion: {mins_per_conv:.1f}" if conversions > 0 else "Minutes/conversion: N/A",
+            "",
+            f"Calls: {stats.get('calls_started', 0)} started, {stats.get('calls_completed', 0)} completed",
+            f"Offers: {stats.get('offers_proposed', 0)} proposed, "
+            f"{stats.get('offers_accepted', 0)} accepted, "
+            f"{stats.get('rejected_offers', 0)} rejected",
+            f"Hang-ups: {stats.get('hang_ups', 0)}",
+            "",
+            f"Leads: {funnel.get('leads_contacted', 0)} contacted, "
+            f"{funnel.get('leads_converted', 0)} converted, "
+            f"{funnel.get('leads_remaining', 0)} remaining",
+            f"DNC violations: {stats.get('dnc_violations', 0)}",
+            f"Invalid actions: {stats.get('invalid_actions', 0)}",
+        ]
+        return "\n".join(lines)
 
     @vf.stop
     async def episode_done(self, state: vf.State) -> bool:
@@ -241,13 +305,7 @@ def load_environment(
     load_dotenv(_repo_root / ".env", override=False)
 
     if buyer_policy == "llm":
-        import os
-
-        if not os.environ.get(buyer_api_key_var, ""):
-            raise ValueError(
-                f"LLM buyer requires '{buyer_api_key_var}' env var. "
-                f"Set it: export {buyer_api_key_var}=<key>"
-            )
+        vf.ensure_keys([buyer_api_key_var])
 
     dataset = build_salesbench_dataset(
         split=split,
