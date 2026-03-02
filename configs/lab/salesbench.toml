@@ -10,26 +10,26 @@ max_async_level = 10
 env_file = ["../../secrets.env"]
 
 [sampling]
-max_tokens = 24576
+max_tokens = 16384
 temperature = 0.7
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 28, total_hours = 24 }
+args = { split = "train", num_examples = 2048, num_leads = 10, total_hours = 8 }
 
 [eval]
 interval = 25
-num_examples = 32
+num_examples = 16
 rollouts_per_example = 2
 eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 48, total_hours = 40 }
+args = { split = "eval", num_examples = 256, num_leads = 10, total_hours = 8 }
 
 [val]
 interval = 25
-num_examples = 16
+num_examples = 8
 rollouts_per_example = 1
 
 [buffer]
@@ -42,5 +42,5 @@ seed = 2026
 
 [wandb]
 project = "salesbench"
-name = "intellect3.1-salesbench-v1"
+name = "intellect3.1-salesbench-fast-v1"
 entity = "hamza-mos-university-of-waterloo"
