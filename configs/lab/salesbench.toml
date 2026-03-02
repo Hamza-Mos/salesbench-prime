@@ -1,11 +1,10 @@
-# Hosted RL starter config for the new salesbench-prime-rl harness.
-# Replace the env id with your pushed private/public environment id.
+# Fast proof-of-concept config: prove hill-climbing in <24h
+# Optimized for speed: small model, short episodes, small batches
 
-model = "PrimeIntellect/INTELLECT-3.1"
-max_steps = 300
-batch_size = 256
-rollouts_per_example = 16
-oversampling_factor = 2.0
+model = "Qwen/Qwen3-4B-Instruct-2507"
+max_steps = 50
+batch_size = 32
+rollouts_per_example = 8
 max_async_level = 10
 env_file = ["../../secrets.env"]
 
@@ -18,7 +17,7 @@ id = "salesbench/salesbench"
 args = { split = "train", num_examples = 2048, num_leads = 10, total_hours = 8 }
 
 [eval]
-interval = 25
+interval = 10
 num_examples = 16
 rollouts_per_example = 2
 eval_base_model = true
@@ -28,7 +27,7 @@ id = "salesbench/salesbench"
 args = { split = "eval", num_examples = 256, num_leads = 10, total_hours = 8 }
 
 [val]
-interval = 25
+interval = 10
 num_examples = 8
 rollouts_per_example = 1
 
@@ -42,5 +41,5 @@ seed = 2026
 
 [wandb]
 project = "salesbench"
-name = "intellect3.1-salesbench-fast-v1"
+name = "qwen3-4b-salesbench-fast-poc"
 entity = "hamza-mos-university-of-waterloo"
