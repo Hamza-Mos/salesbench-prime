@@ -302,31 +302,29 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
 
 
 def _patch_eval_display_bug() -> None:
-    """Fix verifiers <=0.1.10 bug: eval_display crashes when error is a dict.
+    """Fix verifiers <=0.1.10 bug: eval_display.py line 718 crashes when error is a dict.
 
-    The display code does ``rich.Text.append(error_0)`` where ``error_0`` is an
-    ``ErrorInfo`` dict.  ``Rich.Text.append`` only accepts ``str | Text``, so it
-    raises ``TypeError``.  We monkey-patch ``state_to_output`` to stringify the
-    error field after serialisation, which is the last point before the display
-    code reads it.
+    ``EvalDisplay._make_env_detail`` does ``rich.Text.append(error_0)`` where
+    ``error_0`` is an ``ErrorInfo`` dict.  Rich only accepts ``str | Text``.
+    We wrap ``_make_env_detail`` to stringify dict errors in the outputs list
+    before the original method tries to render them.
     """
     try:
-        from verifiers.utils import save_utils
+        from verifiers.utils.eval_display import EvalDisplay
 
-        _orig = save_utils.state_to_output
-
+        _orig = EvalDisplay._make_env_detail
         if getattr(_orig, "_salesbench_patched", False):
-            return  # already patched
+            return
 
-        def _patched_state_to_output(state, state_columns=None):
-            output = _orig(state, state_columns or [])
-            err = output.get("error")
-            if isinstance(err, dict):
-                output["error"] = err.get("error_chain_str") or str(err)
-            return output
+        def _patched(self, config, env_state, results):
+            for output in results.get("outputs", []):
+                err = output.get("error")
+                if isinstance(err, dict):
+                    output["error"] = err.get("error_chain_str") or str(err)
+            return _orig(self, config, env_state, results)
 
-        _patched_state_to_output._salesbench_patched = True  # type: ignore[attr-defined]
-        save_utils.state_to_output = _patched_state_to_output
+        _patched._salesbench_patched = True  # type: ignore[attr-defined]
+        EvalDisplay._make_env_detail = _patched
     except Exception:
         pass  # Silently skip if framework changes in future versions
 
