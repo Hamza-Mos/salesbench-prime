@@ -1,12 +1,12 @@
 # Hosted RL starter config for the new salesbench-prime-rl harness.
 # Replace the env id with your pushed private/public environment id.
 
-model = "PrimeIntellect/INTELLECT-3"
+model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 300
 batch_size = 256
 rollouts_per_example = 16
 oversampling_factor = 2.0
-env_file = ["secrets.env"]
+env_file = ["../../secrets.env"]
 
 [sampling]
 max_tokens = 24576
@@ -41,5 +41,5 @@ seed = 2026
 
 [wandb]
 project = "salesbench"
-name = "intellect3-salesbench-v1"
+name = "intellect3.1-salesbench-v1"
 entity = "salesbench"
