@@ -140,6 +140,14 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         last_msg = messages[-1] if messages else {}
         has_tools = "tool_calls" in last_msg and last_msg.get("tool_calls") is not None
 
+        # Sanitize null/empty tool call arguments (Qwen models send None
+        # instead of "{}" for zero-arg tools, which crashes json.loads).
+        if has_tools:
+            for tc in last_msg.get("tool_calls", []):
+                fn = tc.get("function", {})
+                if fn.get("arguments") is None or fn.get("arguments") == "":
+                    fn["arguments"] = "{}"
+
         if has_tools:
             tool_results = await super().env_response(messages, state, **kwargs)
 
