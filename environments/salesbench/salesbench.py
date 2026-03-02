@@ -143,14 +143,30 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         if has_tools:
             tool_results = await super().env_response(messages, state, **kwargs)
 
-            # Inject buyer spoken response after propose_offer decisions
             runtime = state.get("runtime")
-            if runtime and runtime._pending_buyer_speech:
-                speech = runtime._pending_buyer_speech
-                runtime._pending_buyer_speech = None
-                tool_results = list(tool_results) + [
-                    {"role": "user", "content": speech}
-                ]
+            if runtime:
+                # Inject buyer spoken response after propose_offer decisions
+                if runtime._pending_buyer_speech:
+                    speech = runtime._pending_buyer_speech
+                    runtime._pending_buyer_speech = None
+                    tool_results = list(tool_results) + [
+                        {"role": "user", "content": speech}
+                    ]
+                # Also generate buyer conversation response when agent sent
+                # text alongside tool calls during an active call (e.g. the
+                # seller greets the buyer while simultaneously quoting).
+                elif runtime.active_call and not runtime.done:
+                    agent_text = str(last_msg.get("content", "")).strip()
+                    if agent_text:
+                        buyer_reply = await runtime.conversation_turn(
+                            agent_text=agent_text, messages=messages
+                        )
+                        if buyer_reply:
+                            lead = runtime.leads.get(runtime.active_call.lead_id)
+                            name = lead.full_name if lead else "Buyer"
+                            tool_results = list(tool_results) + [
+                                {"role": "user", "content": f"[{name} (buyer)]: {buyer_reply}"}
+                            ]
 
             return tool_results
 
