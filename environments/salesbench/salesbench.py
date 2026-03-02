@@ -222,13 +222,6 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
                 ]
         await super().render_completion(state)
 
-        # Workaround: verifiers <=0.1.10 eval_display crashes with
-        # TypeError when state["error"] is a dict (Rich Text.append
-        # only accepts str).  Stringify it so the TUI summary works.
-        err = state.get("error")
-        if isinstance(err, dict):
-            state["error"] = err.get("error_chain_str") or err.get("error", str(err))
-
     @staticmethod
     def _format_episode_summary(summary: dict) -> str:
         stats = summary.get("stats", {})
@@ -289,6 +282,36 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         return runtime.done
 
 
+def _patch_eval_display_bug() -> None:
+    """Fix verifiers <=0.1.10 bug: eval_display crashes when error is a dict.
+
+    The display code does ``rich.Text.append(error_0)`` where ``error_0`` is an
+    ``ErrorInfo`` dict.  ``Rich.Text.append`` only accepts ``str | Text``, so it
+    raises ``TypeError``.  We monkey-patch ``state_to_output`` to stringify the
+    error field after serialisation, which is the last point before the display
+    code reads it.
+    """
+    try:
+        from verifiers.utils import save_utils
+
+        _orig = save_utils.state_to_output
+
+        if getattr(_orig, "_salesbench_patched", False):
+            return  # already patched
+
+        def _patched_state_to_output(state, state_columns=None):
+            output = _orig(state, state_columns or [])
+            err = output.get("error")
+            if isinstance(err, dict):
+                output["error"] = err.get("error_chain_str") or str(err)
+            return output
+
+        _patched_state_to_output._salesbench_patched = True  # type: ignore[attr-defined]
+        save_utils.state_to_output = _patched_state_to_output
+    except Exception:
+        pass  # Silently skip if framework changes in future versions
+
+
 def load_environment(
     split: str = "train",
     num_examples: int = 256,
@@ -325,6 +348,8 @@ def load_environment(
     """
 
     resolved_seed = base_seed if seed is None else seed
+
+    _patch_eval_display_bug()
 
     # Load .env / secrets.env so API keys are available without manual export.
     # When installed from a wheel, __file__ is in site-packages, so also
