@@ -383,7 +383,7 @@ class LLMBuyerPolicy:
                 model=self.model,
                 messages=llm_messages,
                 temperature=1.0,
-                max_completion_tokens=16384,
+                max_completion_tokens=256,
                 response_format={"type": "json_object"},
             )
             raw = response.choices[0].message.content or "{}"
@@ -444,7 +444,7 @@ class LLMBuyerPolicy:
                 model=self.model,
                 messages=llm_messages,
                 temperature=1.0,
-                max_completion_tokens=16384,
+                max_completion_tokens=512,
             )
             raw = response.choices[0].message.content or ""
         except Exception as exc:

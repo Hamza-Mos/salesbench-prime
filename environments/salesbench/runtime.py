@@ -235,6 +235,7 @@ class SalesEpisodeRuntime:
         within_hours: int,
         include_completed: bool,
     ) -> dict[str, Any]:
+        within_hours = int(within_hours)
         if within_hours <= 0:
             raise RuntimeActionError("within_hours must be > 0")
 
@@ -396,6 +397,15 @@ class SalesEpisodeRuntime:
         self.active_call.offers.append(offer)
         self.stats.offers_proposed += 1
         self._advance(self.config.tool_costs.propose_offer_minutes, "propose_offer")
+
+        # Time may have expired during _advance, which finalizes the active
+        # call (setting it to None).  Return early to avoid AttributeError.
+        if self.done:
+            return {
+                "offer": offer.to_dict(),
+                "decision": {"decision": "interrupted", "reason": "time expired before buyer could respond", "score": 0.0, "request_dnc": False},
+                "message": "Episode time expired. Call was auto-finalized.",
+            }
 
         if isinstance(self.policy, LLMBuyerPolicy):
             decision = await self.policy.evaluate_offer(

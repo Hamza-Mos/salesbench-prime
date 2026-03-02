@@ -19,7 +19,7 @@ def build_salesbench_dataset(
     base_num_leads: int,
     total_hours: int,
     buyer_policy: str = "llm",
-    buyer_model: str = "openai/gpt-5-mini",
+    buyer_model: str = "gpt-5-mini",
     buyer_base_url: str = "https://api.openai.com/v1",
     buyer_api_key_var: str = "OPENAI_API_KEY",
 ) -> Dataset:
