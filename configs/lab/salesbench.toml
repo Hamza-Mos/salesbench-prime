@@ -6,7 +6,7 @@ max_steps = 300
 batch_size = 256
 rollouts_per_example = 16
 oversampling_factor = 2.0
-max_async_level = 4
+max_async_level = 10
 env_file = ["../../secrets.env"]
 
 [sampling]
