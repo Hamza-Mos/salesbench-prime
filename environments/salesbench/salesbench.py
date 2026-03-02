@@ -231,31 +231,50 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         reason = summary.get("termination_reason", "unknown")
 
         mrr = stats.get("revenue_mrr", 0)
+        max_mrr = summary.get("max_possible_mrr", 0)
         conversions = stats.get("conversions", 0)
         total_leads = funnel.get("total_leads", 0)
         calls = stats.get("calls_started", 0)
         efficiency = (conversions / calls * 100) if calls > 0 else 0
         mins_per_conv = (time_used / conversions) if conversions > 0 else 0
+        avg_rev = (mrr / calls) if calls > 0 else 0
+        capture = (mrr / max_mrr * 100) if max_mrr > 0 else 0
+        time_pct = (time_used / time_budget * 100) if time_budget > 0 else 0
 
         lines = [
             "── Episode Summary ──",
-            f"Result: {reason} ({time_used}/{time_budget} min used)",
+            f"Result: {reason} ({time_used}/{time_budget} min, {time_pct:.0f}% utilization)",
             "",
-            f"Revenue MRR: ${mrr:.2f}",
-            f"Conversions: {conversions}/{total_leads} leads ({efficiency:.0f}% call efficiency)",
-            f"Minutes/conversion: {mins_per_conv:.1f}" if conversions > 0 else "Minutes/conversion: N/A",
+            "Revenue",
+            f"  MRR earned: ${mrr:.2f}",
+            f"  Max possible MRR: ${max_mrr:.2f}",
+            f"  Revenue capture: {capture:.1f}%",
+            f"  Avg revenue/call: ${avg_rev:.2f}",
             "",
-            f"Calls: {stats.get('calls_started', 0)} started, {stats.get('calls_completed', 0)} completed",
-            f"Offers: {stats.get('offers_proposed', 0)} proposed, "
+            "Conversions",
+            f"  Converted: {conversions}/{total_leads} leads",
+            f"  Call efficiency: {efficiency:.0f}% ({conversions}/{calls} calls converted)",
+            f"  Minutes/conversion: {mins_per_conv:.1f}" if conversions > 0 else "  Minutes/conversion: N/A",
+            "",
+            "Pipeline",
+            f"  Calls: {calls} started, {stats.get('calls_completed', 0)} completed",
+            f"  Offers: {stats.get('offers_proposed', 0)} proposed, "
             f"{stats.get('offers_accepted', 0)} accepted, "
             f"{stats.get('rejected_offers', 0)} rejected",
-            f"Hang-ups: {stats.get('hang_ups', 0)}",
+            f"  Hang-ups: {stats.get('hang_ups', 0)}",
+            f"  Callbacks: {stats.get('callbacks_scheduled', 0)} scheduled, "
+            f"{stats.get('callbacks_completed', 0)} completed",
             "",
-            f"Leads: {funnel.get('leads_contacted', 0)} contacted, "
-            f"{funnel.get('leads_converted', 0)} converted, "
-            f"{funnel.get('leads_remaining', 0)} remaining",
-            f"DNC violations: {stats.get('dnc_violations', 0)}",
-            f"Invalid actions: {stats.get('invalid_actions', 0)}",
+            "Leads",
+            f"  Contacted: {funnel.get('leads_contacted', 0)}/{total_leads}",
+            f"  Converted: {funnel.get('leads_converted', 0)}",
+            f"  Exhausted: {funnel.get('leads_exhausted', 0)}",
+            f"  DNC: {funnel.get('leads_dnc', 0)}",
+            f"  Remaining: {funnel.get('leads_remaining', 0)}",
+            "",
+            "Compliance",
+            f"  DNC violations: {stats.get('dnc_violations', 0)}",
+            f"  Invalid actions: {stats.get('invalid_actions', 0)}",
         ]
         return "\n".join(lines)
 

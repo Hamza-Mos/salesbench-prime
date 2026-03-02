@@ -535,6 +535,7 @@ class SalesEpisodeRuntime:
             "termination_reason": self.termination_reason,
             "time_used_minutes": self.current_minute,
             "time_budget_minutes": self.config.max_minutes,
+            "max_possible_mrr": round(self.max_achievable_mrr, 2),
             "funnel": {
                 "total_leads": len(self.leads),
                 "leads_contacted": self.stats.leads_contacted,
