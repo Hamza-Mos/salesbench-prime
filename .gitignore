@@ -20,3 +20,5 @@ environments/*/.prime/*
 
 .env
 secrets.env
+
+training_docs.md
