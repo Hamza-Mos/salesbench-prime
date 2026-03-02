@@ -1,24 +1,25 @@
 # Hosted RL starter config for the new salesbench-prime-rl harness.
 # Replace the env id with your pushed private/public environment id.
 
-model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
+model = "PrimeIntellect/INTELLECT-3"
 max_steps = 300
 batch_size = 256
-rollouts_per_example = 8
+rollouts_per_example = 16
+oversampling_factor = 2.0
 env_file = ["secrets.env"]
 
 [sampling]
 max_tokens = 24576
-temperature = 0.2
+temperature = 0.7
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 48, total_hours = 40 }
+args = { split = "train", num_examples = 2048, num_leads = 28, total_hours = 24 }
 
 [eval]
 interval = 25
 num_examples = 64
-rollouts_per_example = 2
+rollouts_per_example = 4
 eval_base_model = true
 
 [[eval.env]]
@@ -37,3 +38,8 @@ hard_threshold = 0.20
 easy_fraction = 0.0
 hard_fraction = 0.0
 seed = 2026
+
+[wandb]
+project = "salesbench"
+name = "intellect3-salesbench-v1"
+# entity = "your-team-name"  # fill in your W&B team/entity

@@ -127,11 +127,11 @@ _REWARD_FUNCS = [
 ]
 
 _REWARD_WEIGHTS = [
-    1.00,  # reward_revenue_mrr
-    0.00,  # reward_conversion_rate
-    0.00,  # reward_efficiency
-    0.00,  # penalty_dnc_violations
-    0.00,  # penalty_invalid_actions
+    1.00,   # reward_revenue_mrr      — primary objective
+    0.00,   # reward_conversion_rate   — redundant with MRR, keep 0
+    0.00,   # reward_efficiency        — keep 0 initially
+    -0.30,  # penalty_dnc_violations   — prevent compliance hacking
+    -0.05,  # penalty_invalid_actions  — accelerate tool-use learning
 ]
 
 RUBRIC_FUNCS = _REWARD_FUNCS + _GENERATED_METRICS
