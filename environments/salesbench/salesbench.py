@@ -296,13 +296,15 @@ def load_environment(
     resolved_seed = base_seed if seed is None else seed
 
     # Load .env / secrets.env so API keys are available without manual export.
+    # When installed from a wheel, __file__ is in site-packages, so also
+    # search from CWD (where `prime eval run` is executed).
     from pathlib import Path
 
     from dotenv import load_dotenv
 
-    _repo_root = Path(__file__).resolve().parent.parent.parent
-    load_dotenv(_repo_root / "secrets.env", override=False)
-    load_dotenv(_repo_root / ".env", override=False)
+    for root in (Path.cwd(), Path(__file__).resolve().parent.parent.parent):
+        load_dotenv(root / "secrets.env", override=False)
+        load_dotenv(root / ".env", override=False)
 
     if buyer_policy == "llm":
         vf.ensure_keys([buyer_api_key_var])
