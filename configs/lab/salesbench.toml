@@ -1,7 +1,6 @@
 # Fast proof-of-concept config: prove hill-climbing in <24h
-# Optimized for speed: small model, short episodes, small batches
 
-model = "Qwen/Qwen3-4B-Instruct-2507"
+model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
 batch_size = 32
 rollouts_per_example = 8
@@ -14,7 +13,7 @@ temperature = 0.7
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 10, total_hours = 8, max_turns = 200 }
+args = { split = "train", num_examples = 2048, num_leads = 10, total_hours = 8 }
 
 [eval]
 interval = 10
@@ -24,7 +23,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 10, total_hours = 8, max_turns = 200 }
+args = { split = "eval", num_examples = 256, num_leads = 10, total_hours = 8 }
 
 [val]
 interval = 10
@@ -41,5 +40,5 @@ seed = 2026
 
 [wandb]
 project = "salesbench"
-name = "qwen3-4b-salesbench-fast-poc"
+name = "intellect3.1-salesbench-fast-poc"
 entity = "hamza-mos-university-of-waterloo"
