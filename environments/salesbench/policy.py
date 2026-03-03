@@ -345,16 +345,31 @@ only when the agent formally proposes an offer.
 Respond with plain text only (no JSON, no markdown)."""
 
 
+# Module-level shared resources so every LLMBuyerPolicy instance (one per
+# rollout) reuses the same thread pool and HTTP connection pool instead of
+# spawning thousands of threads.
+_BUYER_THREAD_POOL = ThreadPoolExecutor(max_workers=128, thread_name_prefix="buyer-llm")
+_BUYER_CLIENTS: dict[str, openai.OpenAI] = {}
+
+
+def _get_buyer_client(base_url: str, api_key: str) -> openai.OpenAI:
+    """Return a shared OpenAI client per (base_url, api_key) pair."""
+    key = f"{base_url}:{api_key[:8]}"
+    if key not in _BUYER_CLIENTS:
+        _BUYER_CLIENTS[key] = openai.OpenAI(api_key=api_key, base_url=base_url)
+    return _BUYER_CLIENTS[key]
+
+
 class LLMBuyerPolicy:
     """LLM-based buyer model that uses a cheap model to simulate realistic buyer behavior.
 
-    Uses a synchronous OpenAI client + ThreadPoolExecutor to avoid blocking
-    the orchestrator's asyncio event loop (same pattern as tau2-synth).
+    Uses a synchronous OpenAI client + shared ThreadPoolExecutor to avoid
+    blocking the orchestrator's asyncio event loop (same pattern as tau2-synth).
     """
 
     def __init__(self, model: str, base_url: str, api_key: str) -> None:
-        self._sync_client = openai.OpenAI(api_key=api_key, base_url=base_url)
-        self._thread_pool = ThreadPoolExecutor(max_workers=64, thread_name_prefix="buyer-llm")
+        self._sync_client = _get_buyer_client(base_url, api_key)
+        self._thread_pool = _BUYER_THREAD_POOL
         self.model = model
 
     async def _run_in_thread(self, func, *args, **kwargs):
