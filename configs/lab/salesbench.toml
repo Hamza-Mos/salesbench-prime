@@ -1,14 +1,16 @@
 # Fast proof-of-concept config: prove hill-climbing in <24h
+# Fixed: max_tokens for full episodes, larger batch, no difficulty filtering
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
-batch_size = 32
+batch_size = 128
 rollouts_per_example = 8
 max_async_level = 10
+learning_rate = 5e-5
 env_file = ["../../secrets.env"]
 
 [sampling]
-max_tokens = 16384
+max_tokens = 49152
 temperature = 0.7
 
 [[env]]
@@ -31,11 +33,7 @@ num_examples = 8
 rollouts_per_example = 1
 
 [buffer]
-online_difficulty_filtering = true
-easy_threshold = 0.85
-hard_threshold = 0.20
-easy_fraction = 0.0
-hard_fraction = 0.0
+online_difficulty_filtering = false
 seed = 2026
 
 # [wandb]
