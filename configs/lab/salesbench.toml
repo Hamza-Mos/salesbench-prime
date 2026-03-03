@@ -14,7 +14,7 @@ temperature = 0.7
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 10, total_hours = 8 }
+args = { split = "train", num_examples = 2048, num_leads = 10, total_hours = 8, max_turns = 200 }
 
 [eval]
 interval = 10
@@ -24,7 +24,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 10, total_hours = 8 }
+args = { split = "eval", num_examples = 256, num_leads = 10, total_hours = 8, max_turns = 200 }
 
 [val]
 interval = 10
