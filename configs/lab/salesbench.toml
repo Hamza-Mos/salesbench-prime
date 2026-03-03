@@ -38,7 +38,7 @@ easy_fraction = 0.0
 hard_fraction = 0.0
 seed = 2026
 
-[wandb]
-project = "salesbench"
-name = "intellect3.1-salesbench-fast-poc"
-entity = "hamza-mos-university-of-waterloo"
+# [wandb]
+# project = "salesbench"
+# name = "intellect3.1-salesbench-fast-poc"
+# entity = "hamza-mos-university-of-waterloo"
