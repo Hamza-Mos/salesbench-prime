@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import random
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from typing import Any
 
 import openai
@@ -343,13 +346,23 @@ Respond with plain text only (no JSON, no markdown)."""
 
 
 class LLMBuyerPolicy:
-    """LLM-based buyer model that uses a cheap model to simulate realistic buyer behavior."""
+    """LLM-based buyer model that uses a cheap model to simulate realistic buyer behavior.
+
+    Uses a synchronous OpenAI client + ThreadPoolExecutor to avoid blocking
+    the orchestrator's asyncio event loop (same pattern as tau2-synth).
+    """
 
     def __init__(self, model: str, base_url: str, api_key: str) -> None:
-        self.client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
+        self._sync_client = openai.OpenAI(api_key=api_key, base_url=base_url)
+        self._thread_pool = ThreadPoolExecutor(max_workers=64, thread_name_prefix="buyer-llm")
         self.model = model
 
-    async def evaluate_offer(
+    async def _run_in_thread(self, func, *args, **kwargs):
+        """Run a blocking function in the thread pool without blocking the event loop."""
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(self._thread_pool, partial(func, *args, **kwargs))
+
+    def _sync_evaluate_offer(
         self, *, lead: Lead, offer: Offer, messages: list | None = None
     ) -> DecisionResult:
         system_prompt = _build_buyer_decision_prompt(lead)
@@ -370,16 +383,13 @@ class LLMBuyerPolicy:
                 role = msg.get("role", "")
                 content = msg.get("content", "")
                 if role in ("user", "assistant") and content:
-                    # Flip roles: in the framework "assistant" = agent, "user" = buyer.
-                    # For the buyer LLM, the agent's words are "user" input and
-                    # the buyer's own prior words are "assistant" output.
                     buyer_role = "user" if role == "assistant" else "assistant"
                     llm_messages.append({"role": buyer_role, "content": str(content)})
 
         llm_messages.append({"role": "user", "content": offer_description})
 
         try:
-            response = await self.client.chat.completions.create(
+            response = self._sync_client.chat.completions.create(
                 model=self.model,
                 messages=llm_messages,
                 temperature=1.0,
@@ -421,10 +431,16 @@ class LLMBuyerPolicy:
             request_dnc=request_dnc,
         )
 
-    async def generate_response(
+    async def evaluate_offer(
+        self, *, lead: Lead, offer: Offer, messages: list | None = None
+    ) -> DecisionResult:
+        return await self._run_in_thread(
+            self._sync_evaluate_offer, lead=lead, offer=offer, messages=messages
+        )
+
+    def _sync_generate_response(
         self, *, lead: Lead, agent_message: str, messages: list | None = None
     ) -> str:
-        """Call LLM to generate a conversational buyer response."""
         system_prompt = _build_buyer_conversation_prompt(lead)
 
         llm_messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
@@ -440,7 +456,7 @@ class LLMBuyerPolicy:
         llm_messages.append({"role": "user", "content": agent_message})
 
         try:
-            response = await self.client.chat.completions.create(
+            response = self._sync_client.chat.completions.create(
                 model=self.model,
                 messages=llm_messages,
                 temperature=1.0,
@@ -452,3 +468,10 @@ class LLMBuyerPolicy:
 
         logger.debug("buyer LLM conversation response: %s", raw[:500])
         return raw.strip() or "I'm listening."
+
+    async def generate_response(
+        self, *, lead: Lead, agent_message: str, messages: list | None = None
+    ) -> str:
+        return await self._run_in_thread(
+            self._sync_generate_response, lead=lead, agent_message=agent_message, messages=messages
+        )
