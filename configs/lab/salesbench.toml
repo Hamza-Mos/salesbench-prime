@@ -10,7 +10,7 @@ learning_rate = 5e-5
 env_file = ["../../secrets.env"]
 
 [sampling]
-max_tokens = 49152
+max_tokens = 65536
 temperature = 0.7
 
 [[env]]
