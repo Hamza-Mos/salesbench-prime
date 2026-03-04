@@ -1,7 +1,8 @@
-# v6: Context summarization — compress old messages at 80% of max_seq_len
-# - context_rewrite_threshold=0.80, context_keep_recent=10
-# - Env v0.7.0: override get_prompt_messages to prevent truncation
-# - All other params kept from v5 (max_tokens=4096, temp=1.0, 4 leads/4h)
+# v6.1: Fix missing [[val.env]] block + add buyer LLM timeouts
+# - Added [[val.env]] — validation was hanging without it
+# - Env v0.7.1: 120s HTTP timeout + 180s hard cap on buyer LLM calls
+# - Context summarization: threshold=0.80, keep_recent=10
+# - All other params kept from v6 (max_tokens=4096, temp=1.0, 4 leads/4h)
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
@@ -33,6 +34,10 @@ args = { split = "eval", num_examples = 256, num_leads = 4, total_hours = 4, con
 interval = 10
 num_examples = 8
 rollouts_per_example = 1
+
+[[val.env]]
+id = "salesbench/salesbench"
+args = { split = "eval", num_examples = 64, num_leads = 4, total_hours = 4, context_rewrite_threshold = 0.80, context_keep_recent = 10 }
 
 [buffer]
 online_difficulty_filtering = false

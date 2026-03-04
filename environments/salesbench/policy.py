@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import random
+import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Any
@@ -352,11 +353,16 @@ _BUYER_THREAD_POOL = ThreadPoolExecutor(max_workers=128, thread_name_prefix="buy
 _BUYER_CLIENTS: dict[str, openai.OpenAI] = {}
 
 
+_BUYER_TIMEOUT = openai.Timeout(120.0, connect=20.0)
+
+
 def _get_buyer_client(base_url: str, api_key: str) -> openai.OpenAI:
     """Return a shared OpenAI client per (base_url, api_key) pair."""
     key = f"{base_url}:{api_key[:8]}"
     if key not in _BUYER_CLIENTS:
-        _BUYER_CLIENTS[key] = openai.OpenAI(api_key=api_key, base_url=base_url)
+        _BUYER_CLIENTS[key] = openai.OpenAI(
+            api_key=api_key, base_url=base_url, timeout=_BUYER_TIMEOUT
+        )
     return _BUYER_CLIENTS[key]
 
 
@@ -375,7 +381,16 @@ class LLMBuyerPolicy:
     async def _run_in_thread(self, func, *args, **kwargs):
         """Run a blocking function in the thread pool without blocking the event loop."""
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(self._thread_pool, partial(func, *args, **kwargs))
+        t0 = time.monotonic()
+        try:
+            return await asyncio.wait_for(
+                loop.run_in_executor(self._thread_pool, partial(func, *args, **kwargs)),
+                timeout=180.0,  # 3 min hard cap on any buyer LLM call
+            )
+        except asyncio.TimeoutError:
+            elapsed = time.monotonic() - t0
+            logger.error("buyer LLM call timed out after %.1fs (func=%s)", elapsed, func.__name__)
+            raise RuntimeActionError(f"buyer LLM call timed out after {elapsed:.1f}s") from None
 
     def _sync_evaluate_offer(
         self, *, lead: Lead, offer: Offer, messages: list | None = None
@@ -403,6 +418,7 @@ class LLMBuyerPolicy:
 
         llm_messages.append({"role": "user", "content": offer_description})
 
+        t0 = time.monotonic()
         try:
             response = self._sync_client.chat.completions.create(
                 model=self.model,
@@ -412,10 +428,17 @@ class LLMBuyerPolicy:
                 response_format={"type": "json_object"},
             )
             raw = response.choices[0].message.content or "{}"
+        except openai.APITimeoutError as exc:
+            elapsed = time.monotonic() - t0
+            logger.warning("buyer evaluate_offer timed out after %.1fs: %s", elapsed, exc)
+            raise RuntimeActionError(f"buyer LLM timeout after {elapsed:.1f}s: {exc}") from exc
         except Exception as exc:
             raise RuntimeActionError(f"buyer LLM API error: {exc}") from exc
 
-        logger.debug("buyer LLM raw response: %s", raw[:500])
+        elapsed = time.monotonic() - t0
+        if elapsed > 30.0:
+            logger.warning("buyer evaluate_offer slow: %.1fs", elapsed)
+        logger.debug("buyer LLM raw response (%.1fs): %s", elapsed, raw[:500])
 
         try:
             parsed = json.loads(raw)
@@ -470,6 +493,7 @@ class LLMBuyerPolicy:
 
         llm_messages.append({"role": "user", "content": agent_message})
 
+        t0 = time.monotonic()
         try:
             response = self._sync_client.chat.completions.create(
                 model=self.model,
@@ -478,10 +502,17 @@ class LLMBuyerPolicy:
                 max_completion_tokens=16384,
             )
             raw = response.choices[0].message.content or ""
+        except openai.APITimeoutError as exc:
+            elapsed = time.monotonic() - t0
+            logger.warning("buyer generate_response timed out after %.1fs: %s", elapsed, exc)
+            raise RuntimeActionError(f"buyer LLM timeout after {elapsed:.1f}s: {exc}") from exc
         except Exception as exc:
             raise RuntimeActionError(f"buyer LLM API error: {exc}") from exc
 
-        logger.debug("buyer LLM conversation response: %s", raw[:500])
+        elapsed = time.monotonic() - t0
+        if elapsed > 30.0:
+            logger.warning("buyer generate_response slow: %.1fs", elapsed)
+        logger.debug("buyer LLM conversation response (%.1fs): %s", elapsed, raw[:500])
         return raw.strip() or "I'm listening."
 
     async def generate_response(
