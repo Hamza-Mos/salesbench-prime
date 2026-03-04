@@ -378,6 +378,13 @@ class LLMBuyerPolicy:
         self._thread_pool = _BUYER_THREAD_POOL
         self.model = model
 
+        # Observability counters (per-episode, reset on new policy instance)
+        self.call_count: int = 0
+        self.timeout_count: int = 0
+        self.slow_call_count: int = 0  # >30s
+        self.total_latency: float = 0.0
+        self.max_latency: float = 0.0
+
     async def _run_in_thread(self, func, *args, **kwargs):
         """Run a blocking function in the thread pool without blocking the event loop."""
         loop = asyncio.get_running_loop()
@@ -389,6 +396,10 @@ class LLMBuyerPolicy:
             )
         except asyncio.TimeoutError:
             elapsed = time.monotonic() - t0
+            self.timeout_count += 1
+            self.call_count += 1
+            self.total_latency += elapsed
+            self.max_latency = max(self.max_latency, elapsed)
             logger.error("buyer LLM call timed out after %.1fs (func=%s)", elapsed, func.__name__)
             raise RuntimeActionError(f"buyer LLM call timed out after {elapsed:.1f}s") from None
 
@@ -436,7 +447,11 @@ class LLMBuyerPolicy:
             raise RuntimeActionError(f"buyer LLM API error: {exc}") from exc
 
         elapsed = time.monotonic() - t0
+        self.call_count += 1
+        self.total_latency += elapsed
+        self.max_latency = max(self.max_latency, elapsed)
         if elapsed > 30.0:
+            self.slow_call_count += 1
             logger.warning("buyer evaluate_offer slow: %.1fs", elapsed)
         logger.debug("buyer LLM raw response (%.1fs): %s", elapsed, raw[:500])
 
@@ -510,7 +525,11 @@ class LLMBuyerPolicy:
             raise RuntimeActionError(f"buyer LLM API error: {exc}") from exc
 
         elapsed = time.monotonic() - t0
+        self.call_count += 1
+        self.total_latency += elapsed
+        self.max_latency = max(self.max_latency, elapsed)
         if elapsed > 30.0:
+            self.slow_call_count += 1
             logger.warning("buyer generate_response slow: %.1fs", elapsed)
         logger.debug("buyer LLM conversation response (%.1fs): %s", elapsed, raw[:500])
         return raw.strip() or "I'm listening."

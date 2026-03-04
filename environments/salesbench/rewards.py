@@ -128,6 +128,60 @@ async def metric_context_summary_count(state: dict[str, Any]) -> float:
     """Number of times context summarization was triggered during this episode."""
     return float(state.get("_context_summary_count", 0))
 
+
+# ---------------------------------------------------------------------------
+# Buyer LLM observability metrics
+# ---------------------------------------------------------------------------
+
+def _get_llm_policy(state: dict[str, Any]):
+    """Return the LLMBuyerPolicy from runtime, or None."""
+    from policy import LLMBuyerPolicy
+    rt = _get_runtime(state)
+    if rt is None:
+        return None
+    return rt.policy if isinstance(rt.policy, LLMBuyerPolicy) else None
+
+
+async def metric_buyer_llm_call_count(state: dict[str, Any]) -> float:
+    """Total buyer LLM API calls this episode."""
+    p = _get_llm_policy(state)
+    return float(p.call_count) if p else 0.0
+
+
+async def metric_buyer_llm_timeout_count(state: dict[str, Any]) -> float:
+    """Buyer LLM calls that hit the hard timeout."""
+    p = _get_llm_policy(state)
+    return float(p.timeout_count) if p else 0.0
+
+
+async def metric_buyer_llm_slow_count(state: dict[str, Any]) -> float:
+    """Buyer LLM calls that took >30s."""
+    p = _get_llm_policy(state)
+    return float(p.slow_call_count) if p else 0.0
+
+
+async def metric_buyer_llm_avg_latency(state: dict[str, Any]) -> float:
+    """Average latency (seconds) of buyer LLM calls."""
+    p = _get_llm_policy(state)
+    if p and p.call_count > 0:
+        return p.total_latency / p.call_count
+    return 0.0
+
+
+async def metric_buyer_llm_max_latency(state: dict[str, Any]) -> float:
+    """Max latency (seconds) of any single buyer LLM call."""
+    p = _get_llm_policy(state)
+    return p.max_latency if p else 0.0
+
+
+_BUYER_LLM_METRICS = [
+    metric_buyer_llm_call_count,
+    metric_buyer_llm_timeout_count,
+    metric_buyer_llm_slow_count,
+    metric_buyer_llm_avg_latency,
+    metric_buyer_llm_max_latency,
+]
+
 # ---------------------------------------------------------------------------
 # Assembled rubric
 # ---------------------------------------------------------------------------
@@ -152,5 +206,6 @@ _REWARD_WEIGHTS = [
 
 _STATE_METRICS = [metric_context_summary_count]
 
-RUBRIC_FUNCS = _REWARD_FUNCS + _GENERATED_METRICS + _STATE_METRICS
-RUBRIC_WEIGHTS = _REWARD_WEIGHTS + [0.00] * (len(_GENERATED_METRICS) + len(_STATE_METRICS))
+_ALL_METRICS = _GENERATED_METRICS + _STATE_METRICS + _BUYER_LLM_METRICS
+RUBRIC_FUNCS = _REWARD_FUNCS + _ALL_METRICS
+RUBRIC_WEIGHTS = _REWARD_WEIGHTS + [0.00] * len(_ALL_METRICS)
