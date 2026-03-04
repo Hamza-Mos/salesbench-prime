@@ -201,7 +201,7 @@ _REWARD_WEIGHTS = [
     0.00,   # reward_efficiency        — keep 0 initially
     -0.30,  # penalty_dnc_violations   — prevent compliance hacking
     -0.15,  # penalty_invalid_actions  — visible in gradient (was -0.05)
-    0.25,   # reward_episode_completion — reduced from 0.50 to lower baseline
+    0.00,   # reward_episode_completion — disabled; reward purely from sales
 ]
 
 _STATE_METRICS = [metric_context_summary_count]
