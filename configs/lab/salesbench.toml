@@ -1,8 +1,8 @@
-# v6.1: Remove [val] (was hanging) + add buyer LLM timeouts
-# - Removed [val] block — was causing 30+ min hangs at step 0
-# - Env v0.7.1: 120s HTTP timeout + 180s hard cap on buyer LLM calls
+# v7: Harder task — 8 leads/5h, lower completion bonus (0.25)
+# - 8 leads in 5 hours (was 4/4h) — more leads = harder prioritization
+# - Completion weight 0.50 → 0.25 — less free reward for just finishing
+# - Env v0.8.0: buyer LLM timeouts + observability metrics
 # - Context summarization: threshold=0.80, keep_recent=10
-# - All other params kept from v6 (max_tokens=4096, temp=1.0, 4 leads/4h)
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
@@ -18,7 +18,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 4, context_rewrite_threshold = 0.80, context_keep_recent = 10 }
+args = { split = "train", num_examples = 2048, num_leads = 8, total_hours = 5, context_rewrite_threshold = 0.80, context_keep_recent = 10 }
 
 [eval]
 interval = 10
@@ -28,7 +28,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 4, total_hours = 4, context_rewrite_threshold = 0.80, context_keep_recent = 10 }
+args = { split = "eval", num_examples = 256, num_leads = 8, total_hours = 5, context_rewrite_threshold = 0.80, context_keep_recent = 10 }
 
 # [val]
 # interval = 10
