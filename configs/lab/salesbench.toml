@@ -1,14 +1,15 @@
-# v2: Fixed reward sparsity, truncation poisoning, and undertuned hyperparams
-# - lr 5e-5→1e-4 (docs default), batch 128→256 (stable gradients)
-# - Added completion bonus, enabled conversion_rate, increased invalid penalty
-# - 2 leads/2h fits within ~13.7k training seq_len cap
+# v4: Restart from step 5 checkpoint — fix step 9 ModelError collapse
+# - lr 1e-4→5e-5 (prevent weight updates from breaking JSON tool formatting)
+# - batch 256→512 (stable gradients, Prime docs recommendation for agentic)
+# - Warm-start from step 5 checkpoint (reward=0.6943, 0% errors)
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
-batch_size = 256
+batch_size = 512
 rollouts_per_example = 16
 max_async_level = 2
-learning_rate = 1e-4
+learning_rate = 5e-5
+checkpoint_id = "echls0vjvnus3vpd3iutkyuk"
 env_file = ["../../secrets.env"]
 
 [sampling]

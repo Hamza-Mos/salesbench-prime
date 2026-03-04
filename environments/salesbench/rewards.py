@@ -142,7 +142,7 @@ _REWARD_WEIGHTS = [
     0.00,   # reward_efficiency        — keep 0 initially
     -0.30,  # penalty_dnc_violations   — prevent compliance hacking
     -0.15,  # penalty_invalid_actions  — visible in gradient (was -0.05)
-    0.30,   # reward_episode_completion — incentivize finishing, penalize truncation
+    0.50,   # reward_episode_completion — stronger incentive to finish (was 0.30)
 ]
 
 RUBRIC_FUNCS = _REWARD_FUNCS + _GENERATED_METRICS
