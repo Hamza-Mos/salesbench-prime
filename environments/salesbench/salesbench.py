@@ -62,11 +62,15 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         default_total_hours: int,
         max_turns: int,
         system_prompt: str | None = None,
+        context_rewrite_threshold: float = 0.80,
+        context_keep_recent: int = 10,
         **kwargs: Any,
     ) -> None:
         self.default_seed = default_seed
         self.default_num_leads = default_num_leads
         self.default_total_hours = default_total_hours
+        self.context_rewrite_threshold = context_rewrite_threshold
+        self.context_keep_recent = context_keep_recent
 
         rubric = vf.Rubric(funcs=RUBRIC_FUNCS, weights=RUBRIC_WEIGHTS)
         super().__init__(
@@ -138,6 +142,87 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         if tool_name == "calling_propose_offer":
             updated["messages"] = messages
         return updated
+
+    # ------------------------------------------------------------------
+    # Context summarization — compress older messages when nearing
+    # max_seq_len to prevent truncation during training.
+    # ------------------------------------------------------------------
+
+    def _should_summarize(self, state: Any) -> bool:
+        """Return True when the last turn's prompt exceeded the threshold."""
+        if not self.max_seq_len:
+            return False
+
+        trajectory = state.get("trajectory", [])
+        if not trajectory:
+            return False
+
+        last_step = trajectory[-1]
+        response = last_step.get("response")
+        if response is None:
+            return False
+
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            return False
+
+        prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
+        threshold = int(self.max_seq_len * self.context_rewrite_threshold)
+        return prompt_tokens >= threshold
+
+    def _apply_context_summary(
+        self, messages: list, state: Any
+    ) -> list:
+        """Replace older messages with a deterministic context summary.
+
+        Keeps messages[0:2] (system + briefing), inserts a summary from
+        runtime state, then keeps the last ``context_keep_recent`` messages.
+        """
+        runtime = state.get("runtime")
+        if runtime is None:
+            return messages
+
+        prefix_count = 2  # system prompt + briefing
+        keep_recent = min(self.context_keep_recent, len(messages) - prefix_count)
+
+        if keep_recent <= 0 or len(messages) <= prefix_count + keep_recent:
+            return messages  # nothing to compress
+
+        prefix = messages[:prefix_count]
+        recent = messages[-keep_recent:]
+
+        summary_text = runtime.render_context_summary()
+        summary_msg = {"role": "user", "content": summary_text}
+
+        count = state.get("_context_summary_count", 0) + 1
+        state["_context_summary_count"] = count
+
+        logger.info(
+            "Context summarized (#%d): %d msgs → %d "
+            "(%d prefix + 1 summary + %d recent)",
+            count,
+            len(messages),
+            prefix_count + 1 + keep_recent,
+            prefix_count,
+            keep_recent,
+        )
+
+        return prefix + [summary_msg] + recent
+
+    async def get_prompt_messages(self, state):
+        """Override to compress context when nearing max_seq_len.
+
+        The base class builds messages and calls env_response (which runs
+        tool execution and buyer LLM) with full uncompressed context.
+        After that, we optionally summarize older messages so the training
+        model's next prompt stays within budget.
+        """
+        all_messages = await super().get_prompt_messages(state)
+
+        if self._should_summarize(state):
+            all_messages = self._apply_context_summary(all_messages, state)
+
+        return all_messages
 
     async def env_response(self, messages, state, **kwargs):
         last_msg = messages[-1] if messages else {}
@@ -289,6 +374,8 @@ def load_environment(
     max_turns: int = 10_000,
     max_examples: int = -1,
     system_prompt: str | None = None,
+    context_rewrite_threshold: float = 0.80,
+    context_keep_recent: int = 10,
 ) -> vf.Environment:
     """Entry-point for Prime verifiers/Prime Lab.
 
@@ -306,6 +393,11 @@ def load_environment(
         buyer_api_key_var: Environment variable name for the buyer LLM API key.
         max_turns: Safety cap on rollout turns.
         max_examples: Optional cap after dataset construction.
+        context_rewrite_threshold: Fraction of max_seq_len at which to compress
+            older messages into a summary (default 0.80). Disabled when
+            max_seq_len is not set by the training infrastructure.
+        context_keep_recent: Number of recent messages to keep verbatim
+            after context summarization (default 10).
     """
 
     resolved_seed = base_seed if seed is None else seed
@@ -363,4 +455,6 @@ def load_environment(
         default_total_hours=total_hours,
         max_turns=max_turns,
         system_prompt=system_prompt,
+        context_rewrite_threshold=context_rewrite_threshold,
+        context_keep_recent=context_keep_recent,
     )

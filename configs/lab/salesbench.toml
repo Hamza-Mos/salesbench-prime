@@ -1,8 +1,7 @@
-# v5: Prime team feedback — lower max_tokens, higher temp, more leads
-# - max_tokens 49152→4096 (force concise completions, near-zero truncation)
-# - temperature 0.7→1.0 (more exploration, standard for RL)
-# - 4 leads/4h (fits in 4k budget with concise behavior)
-# - lr=5e-5, batch=256, episode_completion=0.50 (kept from v4)
+# v6: Context summarization — compress old messages at 80% of max_seq_len
+# - context_rewrite_threshold=0.80, context_keep_recent=10
+# - Env v0.7.0: override get_prompt_messages to prevent truncation
+# - All other params kept from v5 (max_tokens=4096, temp=1.0, 4 leads/4h)
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
@@ -18,7 +17,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 4 }
+args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 4, context_rewrite_threshold = 0.80, context_keep_recent = 10 }
 
 [eval]
 interval = 10
@@ -28,7 +27,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 4, total_hours = 4 }
+args = { split = "eval", num_examples = 256, num_leads = 4, total_hours = 4, context_rewrite_threshold = 0.80, context_keep_recent = 10 }
 
 [val]
 interval = 10

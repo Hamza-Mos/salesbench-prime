@@ -93,6 +93,8 @@ These map to `salesbench.load_environment(...)`:
 | `hours_per_day`     | `int`         | `8`       | Simulated working hours per day.                         |
 | `max_turns`         | `int`         | `10000`   | Upper bound on model turns per rollout.                  |
 | `max_examples`      | `int`         | `-1`      | Optional cap after dataset generation.                   |
+| `context_rewrite_threshold` | `float` | `0.80`  | Fraction of `max_seq_len` at which to trigger context summarization. |
+| `context_keep_recent` | `int`       | `10`      | Number of recent messages to keep verbatim after summarization. |
 
 Pass args via `--env-args` / `-a` as JSON:
 
@@ -100,6 +102,27 @@ Pass args via `--env-args` / `-a` as JSON:
 prime eval run salesbench -m openai/gpt-5-nano -n 10 -r 1 \
   -a '{"split":"eval","base_seed":123,"num_leads":120,"work_days":5,"hours_per_day":8}'
 ```
+
+## Context Summarization
+
+In multi-turn episodes, the message history grows with each tool call and buyer response. When the prompt reaches **80%** of `max_seq_len` (set by the training infrastructure), older messages are replaced with a compact, deterministic summary built from runtime state — no LLM call required. The last 10 messages are kept verbatim to preserve the current call context.
+
+This prevents training truncation while minimizing KV cache branching (summarization happens at most once or twice per episode, not every turn).
+
+Example summary injected into the conversation:
+
+```
+[CONTEXT SUMMARY — previous turns compressed]
+Time: 120/240 min (120 remaining) | Revenue: $250.00/mo | Conversions: 2 | Offers: 5
+Calls completed (3):
+  - John Smith (warm): accept — 1 offer(s), 25min
+  - Jane Doe (cold): reject — 2 offer(s), 18min
+  - Bob Wilson (hot): hang_up — 1 offer(s), 8min
+Active call: Alice Brown — 1 offer(s) so far
+Pipeline: 1 active leads, 4 contacted
+```
+
+Tune via env args: `context_rewrite_threshold` (when to trigger) and `context_keep_recent` (how many recent messages to preserve).
 
 ## Developer Smoke Test
 

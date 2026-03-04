@@ -501,6 +501,58 @@ class SalesEpisodeRuntime:
         mins = self.config.max_minutes
         return f"Briefing: {n} leads, {mins}min budget. Maximize MRR. Adapt to lead temperature and archetype."
 
+    def render_context_summary(self) -> str:
+        """Deterministic context summary from runtime state (no LLM call).
+
+        Used by get_prompt_messages to compress older messages when nearing
+        the training max_seq_len. Includes KPIs, call history, active call
+        status, and pipeline snapshot.
+        """
+        remaining = max(0, self.config.max_minutes - self.current_minute)
+        lines = [
+            "[CONTEXT SUMMARY — previous turns compressed]",
+            (
+                f"Time: {self.current_minute}/{self.config.max_minutes} min "
+                f"({remaining} remaining) | "
+                f"Revenue: ${self.stats.revenue_mrr:.2f}/mo | "
+                f"Conversions: {self.stats.conversions} | "
+                f"Offers: {self.stats.offers_proposed}"
+            ),
+        ]
+
+        if self.call_history:
+            lines.append(f"Calls completed ({len(self.call_history)}):")
+            for session in self.call_history:
+                lead = self.leads.get(session.lead_id)
+                name = lead.full_name if lead else session.lead_id
+                temp = lead.temperature.value if lead else "?"
+                outcome = session.outcome.value if session.outcome else "no-outcome"
+                lines.append(
+                    f"  - {name} ({temp}): {outcome} — "
+                    f"{len(session.offers)} offer(s), {session.duration_minutes}min"
+                )
+
+        if self.active_call:
+            lead = self.leads.get(self.active_call.lead_id)
+            name = lead.full_name if lead else self.active_call.lead_id
+            lines.append(
+                f"Active call: {name} — "
+                f"{len(self.active_call.offers)} offer(s) so far"
+            )
+
+        scheduled = [
+            t for t in self.callbacks.values()
+            if t.status == CallbackStatus.SCHEDULED
+        ]
+        if scheduled:
+            lines.append(f"Pending callbacks: {len(scheduled)}")
+
+        lines.append(
+            f"Pipeline: {self.num_active_leads} active leads, "
+            f"{self.stats.leads_contacted} contacted"
+        )
+        return "\n".join(lines)
+
     def state_snapshot(self) -> dict[str, Any]:
         return {
             "config": self.config.to_dict(),

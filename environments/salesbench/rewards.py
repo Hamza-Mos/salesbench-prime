@@ -123,6 +123,11 @@ def _make_metric(
 
 _GENERATED_METRICS = [_make_metric(n, f) for n, f in _METRIC_SPECS]
 
+
+async def metric_context_summary_count(state: dict[str, Any]) -> float:
+    """Number of times context summarization was triggered during this episode."""
+    return float(state.get("_context_summary_count", 0))
+
 # ---------------------------------------------------------------------------
 # Assembled rubric
 # ---------------------------------------------------------------------------
@@ -145,5 +150,7 @@ _REWARD_WEIGHTS = [
     0.50,   # reward_episode_completion — stronger incentive to finish (was 0.30)
 ]
 
-RUBRIC_FUNCS = _REWARD_FUNCS + _GENERATED_METRICS
-RUBRIC_WEIGHTS = _REWARD_WEIGHTS + [0.00] * len(_GENERATED_METRICS)
+_STATE_METRICS = [metric_context_summary_count]
+
+RUBRIC_FUNCS = _REWARD_FUNCS + _GENERATED_METRICS + _STATE_METRICS
+RUBRIC_WEIGHTS = _REWARD_WEIGHTS + [0.00] * (len(_GENERATED_METRICS) + len(_STATE_METRICS))
