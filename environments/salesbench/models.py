@@ -122,6 +122,21 @@ class Lead:
     notes: list[str] = field(default_factory=list)
     accepted_offer: Offer | None = None
 
+    def to_search_dict(self) -> dict[str, Any]:
+        """Compact dict for search results — shorter keys, omits always-active status and always-false dnc."""
+        return {
+            "id": self.lead_id,
+            "name": self.full_name,
+            "age": self.age,
+            "income": self.annual_income,
+            "state": self.state_code,
+            "need": round(self.latent_need, 3),
+            "budget": round(self.budget_monthly, 2),
+            "temp": self.temperature.value,
+            "archetype": self.archetype.value,
+            "calls": self.call_count,
+        }
+
     def to_brief_dict(self) -> dict[str, Any]:
         return {
             "lead_id": self.lead_id,
@@ -170,6 +185,15 @@ class CallbackTask:
             "due_minute": self.due_minute,
             "reason": self.reason,
             "status": self.status.value,
+        }
+
+    def to_compact_dict(self) -> dict[str, Any]:
+        """Compact dict for list responses — shorter keys, omits status."""
+        return {
+            "id": self.callback_id,
+            "lead": self.lead_id,
+            "due_min": self.due_minute,
+            "reason": self.reason,
         }
 
 

@@ -43,6 +43,9 @@ Strategy:
 - Prioritize warm/hot leads with high need scores and adequate budgets.
 - Match coverage to the lead's budget (premium_to_budget_ratio between 0.5 and 1.0 is ideal).
 - Move quickly through leads — more calls with proposals beats fewer calls with long conversations.
+- Be concise. No narration between tool calls.
+
+Tool time costs (min): search=1, start_call=1, quote=1, propose=4, end_call=1, schedule_cb=1. Others=0.
 """.strip()
 
 
@@ -209,74 +212,15 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         return False
 
     async def render_completion(self, state):
-        """Override to inject episode summary as the final conversation message."""
-        if state.get("final_env_response") is None:
+        """Store episode summary dict for reward computation without injecting text into the conversation."""
+        if state.get("episode_summary") is None:
             runtime = state.get("runtime")
             if runtime:
                 summary = runtime.export_summary()
                 if not runtime.termination_reason:
                     summary["termination_reason"] = state.get("stop_condition", "completed")
                 state["episode_summary"] = summary
-                state["final_env_response"] = [
-                    {"role": "user", "content": self._format_episode_summary(summary)}
-                ]
         await super().render_completion(state)
-
-    @staticmethod
-    def _format_episode_summary(summary: dict) -> str:
-        stats = summary.get("stats", {})
-        funnel = summary.get("funnel", {})
-        time_used = summary.get("time_used_minutes", 0)
-        time_budget = summary.get("time_budget_minutes", 0)
-        reason = summary.get("termination_reason", "unknown")
-
-        mrr = stats.get("revenue_mrr", 0)
-        max_mrr = summary.get("max_possible_mrr", 0)
-        conversions = stats.get("conversions", 0)
-        total_leads = funnel.get("total_leads", 0)
-        calls = stats.get("calls_started", 0)
-        efficiency = (conversions / calls * 100) if calls > 0 else 0
-        mins_per_conv = (time_used / conversions) if conversions > 0 else 0
-        avg_rev = (mrr / calls) if calls > 0 else 0
-        capture = (mrr / max_mrr * 100) if max_mrr > 0 else 0
-        time_pct = (time_used / time_budget * 100) if time_budget > 0 else 0
-
-        lines = [
-            "── Episode Summary ──",
-            f"Result: {reason} ({time_used}/{time_budget} min, {time_pct:.0f}% utilization)",
-            "",
-            "Revenue",
-            f"  MRR earned: ${mrr:.2f}",
-            f"  Max possible MRR: ${max_mrr:.2f}",
-            f"  Revenue capture: {capture:.1f}%",
-            f"  Avg revenue/call: ${avg_rev:.2f}",
-            "",
-            "Conversions",
-            f"  Converted: {conversions}/{total_leads} leads",
-            f"  Call efficiency: {efficiency:.0f}% ({conversions}/{calls} calls converted)",
-            f"  Minutes/conversion: {mins_per_conv:.1f}" if conversions > 0 else "  Minutes/conversion: N/A",
-            "",
-            "Pipeline",
-            f"  Calls: {calls} started, {stats.get('calls_completed', 0)} completed",
-            f"  Offers: {stats.get('offers_proposed', 0)} proposed, "
-            f"{stats.get('offers_accepted', 0)} accepted, "
-            f"{stats.get('rejected_offers', 0)} rejected",
-            f"  Hang-ups: {stats.get('hang_ups', 0)}",
-            f"  Callbacks: {stats.get('callbacks_scheduled', 0)} scheduled, "
-            f"{stats.get('callbacks_completed', 0)} completed",
-            "",
-            "Leads",
-            f"  Contacted: {funnel.get('leads_contacted', 0)}/{total_leads}",
-            f"  Converted: {funnel.get('leads_converted', 0)}",
-            f"  Exhausted: {funnel.get('leads_exhausted', 0)}",
-            f"  DNC: {funnel.get('leads_dnc', 0)}",
-            f"  Remaining: {funnel.get('leads_remaining', 0)}",
-            "",
-            "Compliance",
-            f"  DNC violations: {stats.get('dnc_violations', 0)}",
-            f"  Invalid actions: {stats.get('invalid_actions', 0)}",
-        ]
-        return "\n".join(lines)
 
     @vf.stop
     async def episode_done(self, state: vf.State) -> bool:

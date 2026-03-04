@@ -154,8 +154,8 @@ class SalesEpisodeRuntime:
         self._advance(self.config.tool_costs.crm_search_minutes, "crm_search")
         return {
             "count": len(filtered),
-            "leads": [lead.to_brief_dict() for lead in filtered],
-            "active_leads_remaining": self.num_active_leads,
+            "leads": [lead.to_search_dict() for lead in filtered],
+            "remaining": self.num_active_leads,
         }
 
     def get_lead(self, *, lead_id: str) -> dict[str, Any]:
@@ -169,9 +169,7 @@ class SalesEpisodeRuntime:
         lead = self._get_lead_or_error(lead_id)
         lead.notes.append(note)
         return {
-            "lead_id": lead_id,
-            "note_count": len(lead.notes),
-            "latest_note": lead.notes[-1],
+            "notes": len(lead.notes),
         }
 
     def pipeline_summary(self) -> dict[str, Any]:
@@ -181,16 +179,14 @@ class SalesEpisodeRuntime:
             status_counts[lead.status.value] += 1
 
         return {
-            "status_counts": status_counts,
-            "stats": self.stats.to_dict(),
-            "time": {
-                "current_minute": self.current_minute,
-                "max_minutes": self.config.max_minutes,
-                "remaining_minutes": max(0, self.config.max_minutes - self.current_minute),
-            },
-            "active_call": self.active_call.to_dict() if self.active_call else None,
+            "status": status_counts,
+            "time_left": max(0, self.config.max_minutes - self.current_minute),
+            "minute": self.current_minute,
+            "conversions": self.stats.conversions,
+            "mrr": round(self.stats.revenue_mrr, 2),
+            "calls": self.stats.calls_started,
+            "offers": self.stats.offers_proposed,
             "done": self.done,
-            "termination_reason": self.termination_reason,
         }
 
     def schedule_callback(
@@ -242,8 +238,9 @@ class SalesEpisodeRuntime:
         )
         self._advance(self.config.tool_costs.schedule_callback_minutes, "schedule_callback")
         return {
-            "callback": callback.to_dict(),
-            "scheduled_count_for_lead": len(existing) + 1,
+            "cb_id": callback_id,
+            "due_min": due_minute,
+            "count": len(existing) + 1,
         }
 
     def list_callbacks(
@@ -269,7 +266,7 @@ class SalesEpisodeRuntime:
         callbacks.sort(key=lambda item: item.due_minute)
         return {
             "count": len(callbacks),
-            "callbacks": [task.to_dict() for task in callbacks],
+            "callbacks": [task.to_compact_dict() for task in callbacks],
         }
 
     def start_call(self, *, lead_id: str) -> dict[str, Any]:
@@ -313,8 +310,10 @@ class SalesEpisodeRuntime:
 
         return {
             "call_id": session.call_id,
-            "lead": lead.to_brief_dict(),
-            "message": "Call connected; gather requirements then propose an offer.",
+            "lead_id": lead_id,
+            "name": lead.full_name,
+            "temp": lead.temperature.value,
+            "budget": round(lead.budget_monthly, 2),
         }
 
     def quote_plan(
@@ -346,9 +345,11 @@ class SalesEpisodeRuntime:
         self._advance(self.config.tool_costs.quote_minutes, "quote_plan")
 
         affordability_ratio = quote["monthly_premium"] / max(lead.budget_monthly, 1.0)
-        quote["lead_budget_monthly"] = round(lead.budget_monthly, 2)
-        quote["premium_to_budget_ratio"] = round(affordability_ratio, 3)
-        return {"quote": quote}
+        return {
+            "premium": quote["monthly_premium"],
+            "budget": round(lead.budget_monthly, 2),
+            "ratio": round(affordability_ratio, 3),
+        }
 
     async def conversation_turn(
         self, *, agent_text: str, messages: list | None = None
@@ -422,9 +423,7 @@ class SalesEpisodeRuntime:
         # call (setting it to None).  Return early to avoid AttributeError.
         if self.done:
             return {
-                "offer": offer.to_dict(),
-                "decision": {"decision": "interrupted", "reason": "time expired before buyer could respond", "score": 0.0, "request_dnc": False},
-                "message": "Episode time expired. Call was auto-finalized.",
+                "decision": {"decision": "interrupted", "reason": "time expired"},
             }
 
         if isinstance(self.policy, LLMBuyerPolicy):
@@ -442,7 +441,6 @@ class SalesEpisodeRuntime:
         )
 
         response: dict[str, Any] = {
-            "offer": offer.to_dict(),
             "decision": decision.to_dict(),
         }
 
@@ -453,7 +451,7 @@ class SalesEpisodeRuntime:
             self.stats.conversions += 1
             self.stats.offers_accepted += 1
             self.stats.revenue_mrr += offer.monthly_premium
-            response["message"] = "Buyer accepted. End the call to finalize the conversion."
+            response["msg"] = "Accepted. End call to finalize."
             logger.info(
                 "Conversion: lead=%s premium=%.2f total_mrr=%.2f",
                 lead.lead_id,
@@ -463,16 +461,16 @@ class SalesEpisodeRuntime:
 
         elif decision.decision == BuyerDecision.REJECT:
             self.stats.rejected_offers += 1
-            response["message"] = "Buyer rejected this offer. You can try a revised proposal."
+            response["msg"] = "Rejected. Try a revised offer."
 
         elif decision.decision == BuyerDecision.HANG_UP:
             self.stats.hang_ups += 1
             self.active_call.outcome = BuyerDecision.HANG_UP
-            response["message"] = "Buyer ended the call."
+            response["msg"] = "Hung up."
             if decision.request_dnc:
                 lead.status = LeadStatus.DNC
                 lead.do_not_call = True
-                response["message"] += " Do-not-call requested."
+                response["msg"] += " DNC requested."
                 logger.debug("Lead %s marked DNC after hang-up", lead.lead_id)
             self._finalize_active_call(reason="buyer_hang_up")
 
@@ -493,20 +491,15 @@ class SalesEpisodeRuntime:
         call = self._finalize_active_call(reason=disposition)
         self._check_termination()
         return {
-            "call": call.to_dict(),
-            "disposition": disposition,
+            "call_id": call.call_id,
+            "duration": call.duration_minutes,
+            "outcome": call.outcome.value if call.outcome else None,
         }
 
     def render_briefing(self) -> str:
-        return (
-            "Episode briefing:\n"
-            f"- Leads loaded: {len(self.leads)}\n"
-            f"- Time budget: {self.config.max_minutes} minutes\n"
-            "- Each lead has a temperature (cold/lukewarm/warm/hot) and personality archetype\n"
-            "- Adapt your approach to each lead's personality and readiness level\n"
-            "- Objective: maximize monthly recurring premium while avoiding compliance failures\n"
-            "- Termination: time exhausted, pipeline exhausted, or too many invalid actions"
-        )
+        n = len(self.leads)
+        mins = self.config.max_minutes
+        return f"Briefing: {n} leads, {mins}min budget. Maximize MRR. Adapt to lead temperature and archetype."
 
     def state_snapshot(self) -> dict[str, Any]:
         return {
