@@ -1,11 +1,11 @@
-# v4: Fix step 9 ModelError collapse — fresh start with stable hyperparams
+# v4: Fix step 9 ModelError collapse — lower lr, keep batch=256
 # - lr 1e-4→5e-5 (prevent weight updates from breaking JSON tool formatting)
-# - batch 256→512 (stable gradients, Prime docs recommendation for agentic)
+# - batch stays 256 (512 caused 50%+ ModelErrors from bad seeds under memory pressure)
 # - episode_completion reward weight 0.30→0.50
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
-batch_size = 512
+batch_size = 256
 rollouts_per_example = 16
 max_async_level = 2
 learning_rate = 5e-5
