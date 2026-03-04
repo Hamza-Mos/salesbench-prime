@@ -67,6 +67,15 @@ async def penalty_invalid_actions(state: dict[str, Any]) -> float:
     return -0.1 * float(runtime.stats.invalid_actions)
 
 
+async def reward_episode_completion(state: dict[str, Any]) -> float:
+    """Bonus for completing the episode (not truncated by infrastructure)."""
+
+    runtime = _get_runtime(state)
+    if runtime is None:
+        return 0.0
+    return 1.0 if runtime.done else 0.0
+
+
 # ---------------------------------------------------------------------------
 # Metric functions (data-driven generation)
 # ---------------------------------------------------------------------------
@@ -124,14 +133,16 @@ _REWARD_FUNCS = [
     reward_efficiency,
     penalty_dnc_violations,
     penalty_invalid_actions,
+    reward_episode_completion,
 ]
 
 _REWARD_WEIGHTS = [
     1.00,   # reward_revenue_mrr      — primary objective
-    0.00,   # reward_conversion_rate   — redundant with MRR, keep 0
+    0.25,   # reward_conversion_rate   — cleaner signal than MRR alone
     0.00,   # reward_efficiency        — keep 0 initially
     -0.30,  # penalty_dnc_violations   — prevent compliance hacking
-    -0.05,  # penalty_invalid_actions  — accelerate tool-use learning
+    -0.15,  # penalty_invalid_actions  — visible in gradient (was -0.05)
+    0.30,   # reward_episode_completion — incentivize finishing, penalize truncation
 ]
 
 RUBRIC_FUNCS = _REWARD_FUNCS + _GENERATED_METRICS

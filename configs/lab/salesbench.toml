@@ -1,12 +1,14 @@
-# Fast proof-of-concept config: prove hill-climbing in <24h
-# Fixed: max_tokens for full episodes, larger batch, no difficulty filtering
+# v2: Fixed reward sparsity, truncation poisoning, and undertuned hyperparams
+# - lr 5e-5→1e-4 (docs default), batch 128→256 (stable gradients)
+# - Added completion bonus, enabled conversion_rate, increased invalid penalty
+# - 2 leads/2h fits within ~13.7k training seq_len cap
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
-batch_size = 128
-rollouts_per_example = 8
-max_async_level = 10
-learning_rate = 5e-5
+batch_size = 256
+rollouts_per_example = 16
+max_async_level = 2
+learning_rate = 1e-4
 env_file = ["../../secrets.env"]
 
 [sampling]
@@ -15,7 +17,7 @@ temperature = 0.7
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 10, total_hours = 8 }
+args = { split = "train", num_examples = 2048, num_leads = 2, total_hours = 2 }
 
 [eval]
 interval = 10
@@ -25,7 +27,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 10, total_hours = 8 }
+args = { split = "eval", num_examples = 256, num_leads = 2, total_hours = 2 }
 
 [val]
 interval = 10
@@ -35,6 +37,10 @@ rollouts_per_example = 1
 [buffer]
 online_difficulty_filtering = false
 seed = 2026
+
+[checkpoints]
+interval = 5
+keep_cloud = 3
 
 # [wandb]
 # project = "salesbench"
