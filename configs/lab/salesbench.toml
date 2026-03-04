@@ -1,7 +1,8 @@
-# v4: Fix step 9 ModelError collapse — lower lr, keep batch=256
-# - lr 1e-4→5e-5 (prevent weight updates from breaking JSON tool formatting)
-# - batch stays 256 (512 caused 50%+ ModelErrors from bad seeds under memory pressure)
-# - episode_completion reward weight 0.30→0.50
+# v5: Prime team feedback — lower max_tokens, higher temp, more leads
+# - max_tokens 49152→4096 (force concise completions, near-zero truncation)
+# - temperature 0.7→1.0 (more exploration, standard for RL)
+# - 4 leads/4h (fits in 4k budget with concise behavior)
+# - lr=5e-5, batch=256, episode_completion=0.50 (kept from v4)
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
@@ -12,12 +13,12 @@ learning_rate = 5e-5
 env_file = ["../../secrets.env"]
 
 [sampling]
-max_tokens = 49152
-temperature = 0.7
+max_tokens = 4096
+temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 2, total_hours = 2 }
+args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 4 }
 
 [eval]
 interval = 10
@@ -27,7 +28,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 2, total_hours = 2 }
+args = { split = "eval", num_examples = 256, num_leads = 4, total_hours = 4 }
 
 [val]
 interval = 10
