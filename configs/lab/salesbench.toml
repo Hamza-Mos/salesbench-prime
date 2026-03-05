@@ -1,7 +1,8 @@
-# v8.1: Fix 50% truncation — aggressive context summarization
-# - 12 leads / 6 hours, completion weight=0.0 (same as v8)
-# - context_rewrite_threshold 0.80 → 0.60 — summarize much earlier
-# - Env v0.9.1: earlier summarization to prevent truncation
+# v9: 8 leads / 3 hours, no completion bonus, threshold=0.60
+# - 8 leads in 3 hours — tight time budget forces prioritization
+# - Completion weight=0.0, reward purely from sales
+# - context_rewrite_threshold=0.60 (keep aggressive summarization)
+# - Env v0.10.0
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
@@ -17,7 +18,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 12, total_hours = 6, context_rewrite_threshold = 0.60, context_keep_recent = 10 }
+args = { split = "train", num_examples = 2048, num_leads = 8, total_hours = 3, context_rewrite_threshold = 0.60, context_keep_recent = 10 }
 
 [eval]
 interval = 10
@@ -27,7 +28,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 12, total_hours = 6, context_rewrite_threshold = 0.60, context_keep_recent = 10 }
+args = { split = "eval", num_examples = 256, num_leads = 8, total_hours = 3, context_rewrite_threshold = 0.60, context_keep_recent = 10 }
 
 # [val]
 # interval = 10
