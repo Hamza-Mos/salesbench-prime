@@ -1,12 +1,12 @@
-# v10: oversampling to cut long-tail rollouts
-# - batch_size=128, oversampling_factor=2.0 (launch 256, keep fastest 128)
-# - Same total rollouts as v9 but step gated by median not max
+# v11: halve batch to reduce trainer bottleneck
+# - batch=64 (was 128) — halves tokens/step from 5.1M to ~2.6M
+# - oversampling=2.0 — launch 128, keep fastest 64 (cuts rollout long-tail)
+# - Trainer was taking ~4h/batch on shared multi-tenant GPUs; expect ~2h now
 # - 8 leads / 3 hours, pure MRR reward, threshold=0.60
-# - Expected step time: ~1-1.5h (was 3.7h)
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
-batch_size = 128
+batch_size = 64
 rollouts_per_example = 16
 oversampling_factor = 2.0
 max_async_level = 2
