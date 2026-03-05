@@ -197,7 +197,7 @@ _REWARD_FUNCS = [
 
 _REWARD_WEIGHTS = [
     1.00,   # reward_revenue_mrr      — primary objective
-    0.25,   # reward_conversion_rate   — cleaner signal than MRR alone
+    0.00,   # reward_conversion_rate   — redundant with MRR, disabled
     0.00,   # reward_efficiency        — keep 0 initially
     -0.30,  # penalty_dnc_violations   — prevent compliance hacking
     -0.15,  # penalty_invalid_actions  — visible in gradient (was -0.05)
