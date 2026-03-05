@@ -1,13 +1,14 @@
-# v9: 8 leads / 3 hours, no completion bonus, threshold=0.60
-# - 8 leads in 3 hours — tight time budget forces prioritization
-# - Completion weight=0.0, reward purely from sales
-# - context_rewrite_threshold=0.60 (keep aggressive summarization)
-# - Env v0.10.0
+# v10: oversampling to cut long-tail rollouts
+# - batch_size=128, oversampling_factor=2.0 (launch 256, keep fastest 128)
+# - Same total rollouts as v9 but step gated by median not max
+# - 8 leads / 3 hours, pure MRR reward, threshold=0.60
+# - Expected step time: ~1-1.5h (was 3.7h)
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
-batch_size = 256
+batch_size = 128
 rollouts_per_example = 16
+oversampling_factor = 2.0
 max_async_level = 2
 learning_rate = 5e-5
 env_file = ["../../secrets.env"]
