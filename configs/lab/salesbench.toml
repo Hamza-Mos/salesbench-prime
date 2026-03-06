@@ -19,7 +19,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.60, context_keep_recent = 10, context_max_seq_len = 20000 }
+args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.90, context_keep_recent = 10, context_max_seq_len = 20000 }
 
 [eval]
 interval = 10
@@ -29,7 +29,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.60, context_keep_recent = 10, context_max_seq_len = 20000 }
+args = { split = "eval", num_examples = 256, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.90, context_keep_recent = 10, context_max_seq_len = 20000 }
 
 # [val]
 # interval = 10
