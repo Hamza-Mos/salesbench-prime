@@ -200,8 +200,8 @@ _REWARD_WEIGHTS = [
     0.00,   # reward_conversion_rate   — redundant with MRR, disabled
     0.00,   # reward_efficiency        — keep 0 initially
     -0.30,  # penalty_dnc_violations   — prevent compliance hacking
-    -0.15,  # penalty_invalid_actions  — visible in gradient (was -0.05)
-    0.00,   # reward_episode_completion — disabled; reward purely from sales
+    -0.05,  # penalty_invalid_actions  — reduced from -0.15; unavoidable schema errors add noise
+    0.30,   # reward_episode_completion — re-enabled; binary signal for finishing episodes
 ]
 
 _STATE_METRICS = [metric_context_summary_count]

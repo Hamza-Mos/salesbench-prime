@@ -1,16 +1,17 @@
-# v13: fix double-negative in penalty rewards — model was REWARDED for invalid actions
-# - penalty_invalid_actions and penalty_dnc_violations returned negative values
-#   with negative weights → positive contribution (reward instead of penalty)
-# - Invalid action "penalty" was adding +0.04 (21% of signal). Now correctly subtracts.
-# - Same config as v12: batch=64, oversampling=2.0, pure MRR reward, 4 leads/2h
+# v14: fix capability degradation — lr too aggressive, batch too small, no completion signal
+# - lr 5e-5 → 1e-5 (prevent knowledge destruction; v13 eval dropped 36.5% after 10 steps)
+# - batch 64 → 128 (reduce gradient noise for high-variance multi-turn episodes)
+# - Re-enable episode_completion weight 0.30 (binary signal; v13 only 50% completion)
+# - Reduce penalty_invalid_actions -0.15 → -0.05 (unavoidable schema errors add noise)
+# - oversampling 2.0 → 1.5 (128 batch × 1.5 = 192 rollouts, manageable)
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
-batch_size = 64
+batch_size = 128
 rollouts_per_example = 16
-oversampling_factor = 2.0
+oversampling_factor = 1.5
 max_async_level = 2
-learning_rate = 5e-5
+learning_rate = 1e-5
 env_file = ["../../secrets.env"]
 
 [sampling]
