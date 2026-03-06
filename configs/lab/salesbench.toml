@@ -1,8 +1,8 @@
-# v12: fix trainer bottleneck — root cause was 42k token sequences, not batch size
-# - num_leads=4 (was 8) — cuts seq length from ~42k to ~20k (back to v4 regime)
-# - context_max_seq_len=20000 — explicit seq len for summarization (infra doesn't set it)
-# - checkpoint_interval=10 (was 5) — halves checkpoint write overhead
-# - batch=64, oversampling=2.0, pure MRR reward
+# v13: fix double-negative in penalty rewards — model was REWARDED for invalid actions
+# - penalty_invalid_actions and penalty_dnc_violations returned negative values
+#   with negative weights → positive contribution (reward instead of penalty)
+# - Invalid action "penalty" was adding +0.04 (21% of signal). Now correctly subtracts.
+# - Same config as v12: batch=64, oversampling=2.0, pure MRR reward, 4 leads/2h
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
