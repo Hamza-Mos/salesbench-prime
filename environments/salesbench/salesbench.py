@@ -64,6 +64,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         system_prompt: str | None = None,
         context_rewrite_threshold: float = 0.80,
         context_keep_recent: int = 10,
+        context_max_seq_len: int | None = None,
         **kwargs: Any,
     ) -> None:
         self.default_seed = default_seed
@@ -71,6 +72,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         self.default_total_hours = default_total_hours
         self.context_rewrite_threshold = context_rewrite_threshold
         self.context_keep_recent = context_keep_recent
+        self.context_max_seq_len = context_max_seq_len
 
         rubric = vf.Rubric(funcs=RUBRIC_FUNCS, weights=RUBRIC_WEIGHTS)
         super().__init__(
@@ -148,11 +150,15 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
     # max_seq_len to prevent truncation during training.
     # ------------------------------------------------------------------
 
-    _FALLBACK_MAX_SEQ_LEN = 20000  # used when infra doesn't set max_seq_len
+    def _effective_max_seq_len(self) -> int | None:
+        """Return max_seq_len from infra, or the explicit env arg override."""
+        return self.max_seq_len or self.context_max_seq_len
 
     def _should_summarize(self, state: Any) -> bool:
         """Return True when the last turn's prompt exceeded the threshold."""
-        max_seq = self.max_seq_len or self._FALLBACK_MAX_SEQ_LEN
+        max_seq = self._effective_max_seq_len()
+        if not max_seq:
+            return False
 
         trajectory = state.get("trajectory", [])
         if not trajectory:
@@ -169,14 +175,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
 
         prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
         threshold = int(max_seq * self.context_rewrite_threshold)
-        should = prompt_tokens >= threshold
-        if should:
-            logger.info(
-                "Context summarization triggered: prompt_tokens=%d >= threshold=%d "
-                "(max_seq=%d, ratio=%.2f)",
-                prompt_tokens, threshold, max_seq, self.context_rewrite_threshold,
-            )
-        return should
+        return prompt_tokens >= threshold
 
     def _apply_context_summary(
         self, messages: list, state: Any
@@ -384,6 +383,7 @@ def load_environment(
     system_prompt: str | None = None,
     context_rewrite_threshold: float = 0.80,
     context_keep_recent: int = 10,
+    context_max_seq_len: int | None = None,
 ) -> vf.Environment:
     """Entry-point for Prime verifiers/Prime Lab.
 
@@ -402,10 +402,13 @@ def load_environment(
         max_turns: Safety cap on rollout turns.
         max_examples: Optional cap after dataset construction.
         context_rewrite_threshold: Fraction of max_seq_len at which to compress
-            older messages into a summary (default 0.80). Disabled when
-            max_seq_len is not set by the training infrastructure.
+            older messages into a summary (default 0.80).
         context_keep_recent: Number of recent messages to keep verbatim
             after context summarization (default 10).
+        context_max_seq_len: Explicit max sequence length for context
+            summarization. Used when the training infrastructure doesn't
+            set max_seq_len via set_max_seq_len(). If neither is set,
+            summarization is disabled.
     """
 
     resolved_seed = base_seed if seed is None else seed
@@ -465,4 +468,5 @@ def load_environment(
         system_prompt=system_prompt,
         context_rewrite_threshold=context_rewrite_threshold,
         context_keep_recent=context_keep_recent,
+        context_max_seq_len=context_max_seq_len,
     )

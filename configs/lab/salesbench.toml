@@ -1,6 +1,6 @@
 # v12: fix trainer bottleneck — root cause was 42k token sequences, not batch size
 # - num_leads=4 (was 8) — cuts seq length from ~42k to ~20k (back to v4 regime)
-# - context summarization fallback — fires even when infra doesn't set max_seq_len
+# - context_max_seq_len=20000 — explicit seq len for summarization (infra doesn't set it)
 # - checkpoint_interval=10 (was 5) — halves checkpoint write overhead
 # - batch=64, oversampling=2.0, pure MRR reward
 
@@ -19,7 +19,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.60, context_keep_recent = 10 }
+args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.60, context_keep_recent = 10, context_max_seq_len = 20000 }
 
 [eval]
 interval = 10
@@ -29,7 +29,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.60, context_keep_recent = 10 }
+args = { split = "eval", num_examples = 256, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.60, context_keep_recent = 10, context_max_seq_len = 20000 }
 
 # [val]
 # interval = 10
