@@ -55,7 +55,7 @@ async def penalty_dnc_violations(state: dict[str, Any]) -> float:
     runtime = _get_runtime(state)
     if runtime is None:
         return 0.0
-    return -float(runtime.stats.dnc_violations)
+    return float(runtime.stats.dnc_violations)
 
 
 async def penalty_invalid_actions(state: dict[str, Any]) -> float:
@@ -64,7 +64,7 @@ async def penalty_invalid_actions(state: dict[str, Any]) -> float:
     runtime = _get_runtime(state)
     if runtime is None:
         return 0.0
-    return -0.1 * float(runtime.stats.invalid_actions)
+    return 0.1 * float(runtime.stats.invalid_actions)
 
 
 async def reward_episode_completion(state: dict[str, Any]) -> float:
