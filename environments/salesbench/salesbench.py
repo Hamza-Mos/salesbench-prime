@@ -148,10 +148,11 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
     # max_seq_len to prevent truncation during training.
     # ------------------------------------------------------------------
 
+    _FALLBACK_MAX_SEQ_LEN = 20000  # used when infra doesn't set max_seq_len
+
     def _should_summarize(self, state: Any) -> bool:
         """Return True when the last turn's prompt exceeded the threshold."""
-        if not self.max_seq_len:
-            return False
+        max_seq = self.max_seq_len or self._FALLBACK_MAX_SEQ_LEN
 
         trajectory = state.get("trajectory", [])
         if not trajectory:
@@ -167,8 +168,15 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
             return False
 
         prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
-        threshold = int(self.max_seq_len * self.context_rewrite_threshold)
-        return prompt_tokens >= threshold
+        threshold = int(max_seq * self.context_rewrite_threshold)
+        should = prompt_tokens >= threshold
+        if should:
+            logger.info(
+                "Context summarization triggered: prompt_tokens=%d >= threshold=%d "
+                "(max_seq=%d, ratio=%.2f)",
+                prompt_tokens, threshold, max_seq, self.context_rewrite_threshold,
+            )
+        return should
 
     def _apply_context_summary(
         self, messages: list, state: Any
