@@ -1,17 +1,18 @@
-# v14: fix capability degradation — lr too aggressive, batch too small, no completion signal
-# - lr 5e-5 → 1e-5 (prevent knowledge destruction; v13 eval dropped 36.5% after 10 steps)
-# - batch 64 → 128 (reduce gradient noise for high-variance multi-turn episodes)
-# - Re-enable episode_completion weight 0.30 (binary signal; v13 only 50% completion)
-# - Reduce penalty_invalid_actions -0.15 → -0.05 (unavoidable schema errors add noise)
-# - oversampling 2.0 → 1.5 (128 batch × 1.5 = 192 rollouts, manageable)
+# v15: faster training — reduce episode scope, raise lr
+# - num_leads 4 → 2 (halve seq_len ~12k→~6k; trainer 80min→~15min per step)
+# - lr 1e-5 → 3e-5 (v13 collapse was penalty bug not lr; 3e-5 is safe middle ground)
+# - batch 128 → 64 (shorter seqs = can afford smaller batch; further speeds trainer)
+# - oversampling 2.0 (64 batch × 2.0 = 128 rollouts, keep fastest 64)
+# - total_hours 2 → 1 (match reduced leads; tighter time pressure)
+# - Expected: ~20min/step vs ~85min, 50 steps in <20h vs 3 days
 
 model = "PrimeIntellect/INTELLECT-3.1"
 max_steps = 50
-batch_size = 128
+batch_size = 64
 rollouts_per_example = 16
-oversampling_factor = 1.5
+oversampling_factor = 2.0
 max_async_level = 2
-learning_rate = 1e-5
+learning_rate = 3e-5
 env_file = ["../../secrets.env"]
 
 [sampling]
@@ -20,7 +21,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.90, context_keep_recent = 10, context_max_seq_len = 20000 }
+args = { split = "train", num_examples = 2048, num_leads = 2, total_hours = 1, context_rewrite_threshold = 0.90, context_keep_recent = 10, context_max_seq_len = 20000 }
 
 [eval]
 interval = 10
@@ -30,7 +31,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.90, context_keep_recent = 10, context_max_seq_len = 20000 }
+args = { split = "eval", num_examples = 256, num_leads = 2, total_hours = 1, context_rewrite_threshold = 0.90, context_keep_recent = 10, context_max_seq_len = 20000 }
 
 # [val]
 # interval = 10
