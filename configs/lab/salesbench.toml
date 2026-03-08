@@ -1,13 +1,12 @@
-# v18: 2 leads, revenue-focused rewards, tighter async
-# v17 problem: 1 lead too easy — base model already at reward ~1.1 (ceiling).
-#   GRPO had zero gradient (all rollouts in group score similarly).
-#   Also severe off-policy training: orchestrator far ahead of trainer.
-# Key changes from v17:
-# - num_leads 1 → 2 (model already closes 1 lead; now learn pipeline + revenue opt)
-# - batch 256 → 128 (reduce trainer bottleneck + off-policy lag)
-# - max_async_level 2 → 1 (tighter sync, less stale data)
-# - Rewards: re-enable budget_utilization (0.30), reduce conversion_rate (0.50→0.20)
-# - Keep lr=3e-5, temp=0.8 (worked fine in v17)
+# v19: fix episode termination + system prompt for tool discipline
+# v18 diagnosis: 78% of episodes ended prematurely via no_tools_called
+#   (model outputs text between calls → episode dies → no completion bonus
+#   → never contacts 2nd lead → only 12% revenue capture).
+# Key changes from v18:
+# - System prompt: CRITICAL RULE — every response must include a tool call
+# - System prompt: contact ALL leads, immediately start next lead after end_call
+# - no_tools_called: 1-turn grace period (don't kill for occasional narration)
+# - Config/rewards unchanged from v18 (2 leads, same weights)
 
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 max_steps = 100
@@ -47,5 +46,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v18"
+name = "qwen3-30b-salesbench-v19"
 entity = "hamza-mos-university-of-waterloo"

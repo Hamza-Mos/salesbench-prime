@@ -2,7 +2,7 @@
 name = "salesbench"
 description = "Stateful, tool-use sales simulation environment for Prime Lab (verifiers)."
 tags = ["sales", "tool-use", "rl", "train", "eval"]
-version = "0.14.0"
+version = "0.15.0"
 requires-python = ">=3.11"
 dependencies = [
     "verifiers>=0.1.10",
