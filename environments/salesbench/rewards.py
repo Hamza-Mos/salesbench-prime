@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from models import BuyerDecision
 from runtime import SalesEpisodeRuntime
 
 
@@ -76,6 +77,26 @@ async def reward_episode_completion(state: dict[str, Any]) -> float:
     return 1.0 if runtime.done else 0.0
 
 
+async def reward_budget_utilization(state: dict[str, Any]) -> float:
+    """Reward for capturing a high fraction of converted leads' budgets.
+
+    For each accepted offer, computes accepted_premium / lead_budget.
+    Normalized by total leads so the signal scales with episode scope.
+    """
+
+    runtime = _get_runtime(state)
+    if runtime is None:
+        return 0.0
+    total_ratio = 0.0
+    for session in runtime.call_history:
+        if session.outcome == BuyerDecision.ACCEPT and session.offers:
+            lead = runtime.leads.get(session.lead_id)
+            if lead and lead.budget_monthly > 0:
+                accepted_premium = session.offers[-1].monthly_premium
+                total_ratio += min(1.0, accepted_premium / lead.budget_monthly)
+    return total_ratio / max(1, runtime.config.num_leads)
+
+
 # ---------------------------------------------------------------------------
 # Metric functions (data-driven generation)
 # ---------------------------------------------------------------------------
@@ -106,7 +127,21 @@ _METRIC_SPECS: list[tuple[str, Callable[[SalesEpisodeRuntime], float]]] = [
     ("metric_revenue_capture_ratio", lambda rt: (
         rt.stats.revenue_mrr / rt.max_achievable_mrr if rt.max_achievable_mrr > 0 else 0.0
     )),
+    ("metric_budget_utilization_raw", lambda rt: _budget_util_raw(rt)),
 ]
+
+
+def _budget_util_raw(rt: SalesEpisodeRuntime) -> float:
+    """Average premium/budget ratio across accepted offers (for observability)."""
+    total = 0.0
+    count = 0
+    for session in rt.call_history:
+        if session.outcome == BuyerDecision.ACCEPT and session.offers:
+            lead = rt.leads.get(session.lead_id)
+            if lead and lead.budget_monthly > 0:
+                total += min(1.0, session.offers[-1].monthly_premium / lead.budget_monthly)
+                count += 1
+    return total / max(1, count) if count > 0 else 0.0
 
 
 def _make_metric(
@@ -193,15 +228,17 @@ _REWARD_FUNCS = [
     penalty_dnc_violations,
     penalty_invalid_actions,
     reward_episode_completion,
+    reward_budget_utilization,
 ]
 
 _REWARD_WEIGHTS = [
-    1.00,   # reward_revenue_mrr      — primary objective
-    0.00,   # reward_conversion_rate   — redundant with MRR, disabled
-    0.00,   # reward_efficiency        — keep 0 initially
-    -0.30,  # penalty_dnc_violations   — prevent compliance hacking
-    -0.05,  # penalty_invalid_actions  — reduced from -0.15; unavoidable schema errors add noise
-    0.30,   # reward_episode_completion — re-enabled; binary signal for finishing episodes
+    1.00,   # reward_revenue_mrr        — primary objective
+    0.00,   # reward_conversion_rate     — redundant with MRR, disabled
+    0.00,   # reward_efficiency          — keep 0 initially
+    -0.30,  # penalty_dnc_violations     — prevent compliance hacking
+    -0.05,  # penalty_invalid_actions    — reduced; unavoidable schema errors add noise
+    0.15,   # reward_episode_completion  — reduced from 0.30; incentivize finishing without drowning revenue
+    0.30,   # reward_budget_utilization  — incentivize proposing premiums closer to lead budget
 ]
 
 _STATE_METRICS = [metric_context_summary_count]
