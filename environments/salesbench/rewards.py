@@ -233,12 +233,12 @@ _REWARD_FUNCS = [
 
 _REWARD_WEIGHTS = [
     1.00,   # reward_revenue_mrr        — primary objective
-    0.00,   # reward_conversion_rate     — redundant with MRR, disabled
-    0.00,   # reward_efficiency          — keep 0 initially
-    -0.30,  # penalty_dnc_violations     — prevent compliance hacking
-    -0.05,  # penalty_invalid_actions    — reduced; unavoidable schema errors add noise
-    0.15,   # reward_episode_completion  — reduced from 0.30; incentivize finishing without drowning revenue
-    0.30,   # reward_budget_utilization  — incentivize proposing premiums closer to lead budget
+    0.50,   # reward_conversion_rate     — binary signal; critical for 1-lead curriculum
+    0.00,   # reward_efficiency          — disabled
+    -0.30,  # penalty_dnc_violations     — hard compliance
+    -0.05,  # penalty_invalid_actions    — keep low; unavoidable schema errors add noise
+    0.20,   # reward_episode_completion  — incentivize finishing (slightly higher for short episodes)
+    0.00,   # reward_budget_utilization  — disabled; premature when conversions are rare. Re-enable later.
 ]
 
 _STATE_METRICS = [metric_context_summary_count]

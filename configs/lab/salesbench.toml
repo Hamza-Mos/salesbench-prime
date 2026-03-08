@@ -1,33 +1,30 @@
-# v16: non-thinking model, better reward signal, stronger GRPO variance
-# - Model: Qwen3-30B-A3B-Instruct (no <think> blocks — expect ~4-5k seq vs 13k)
-# - lr 3e-5 → 1e-5 (match prime-rl examples; less aggressive for stability)
-# - batch 64 → 128 (more samples per step; affordable with shorter seqs)
-# - rollouts 16 → 32 (larger groups for better GRPO advantage estimation)
-# - lora_rank=32, lora_alpha=64 (explicit; good for semantic/reasoning tasks)
-# - num_leads 2 → 4 (more variance in outcomes; seq_len still manageable without think)
-# - total_hours 1 → 2 (match increased leads)
-# - online_difficulty_filtering on (skip zero-signal batches)
-# - Reward: +budget_utilization (0.30), completion reduced 0.30→0.15
-# - eval/ckpt interval 10 → 5 (better model selection)
-# - max_steps 50 → 100 (faster steps = can afford more)
+# v17: curriculum learning — 1 lead, simpler rewards, warmer start
+# Key changes from v16:
+# - num_leads 4 → 1 (dense signal; learn to close before pipeline management)
+# - total_hours 2 → 1 (match reduced scope)
+# - batch 128 → 256 (more stable GRPO gradients, affordable with shorter seqs)
+# - lr 1e-5 → 3e-5 (faster learning with shorter episodes)
+# - temp 1.0 → 0.8 (less noise when base success rate is low)
+# - Rewards: re-enable conversion_rate (0.50), disable budget_utilization (premature)
+# - completion 0.15 → 0.20, budget_utilization 0.30 → 0.00
 
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 max_steps = 100
-batch_size = 128
+batch_size = 256
 rollouts_per_example = 32
 oversampling_factor = 2.0
 max_async_level = 2
-learning_rate = 1e-5
+learning_rate = 3e-5
 lora_alpha = 64
 env_file = ["../../secrets.env"]
 
 [sampling]
 max_tokens = 4096
-temperature = 1.0
+temperature = 0.8
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "train", num_examples = 2048, num_leads = 1, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [eval]
 interval = 5
@@ -37,12 +34,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
-
-# [val]
-# interval = 10
-# num_examples = 8
-# rollouts_per_example = 1
+args = { split = "eval", num_examples = 256, num_leads = 1, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
@@ -54,5 +46,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v16"
+name = "qwen3-30b-salesbench-v17-curriculum"
 entity = "hamza-mos-university-of-waterloo"
