@@ -1,19 +1,20 @@
-# v17: curriculum learning — 1 lead, simpler rewards, warmer start
-# Key changes from v16:
-# - num_leads 4 → 1 (dense signal; learn to close before pipeline management)
-# - total_hours 2 → 1 (match reduced scope)
-# - batch 128 → 256 (more stable GRPO gradients, affordable with shorter seqs)
-# - lr 1e-5 → 3e-5 (faster learning with shorter episodes)
-# - temp 1.0 → 0.8 (less noise when base success rate is low)
-# - Rewards: re-enable conversion_rate (0.50), disable budget_utilization (premature)
-# - completion 0.15 → 0.20, budget_utilization 0.30 → 0.00
+# v18: 2 leads, revenue-focused rewards, tighter async
+# v17 problem: 1 lead too easy — base model already at reward ~1.1 (ceiling).
+#   GRPO had zero gradient (all rollouts in group score similarly).
+#   Also severe off-policy training: orchestrator far ahead of trainer.
+# Key changes from v17:
+# - num_leads 1 → 2 (model already closes 1 lead; now learn pipeline + revenue opt)
+# - batch 256 → 128 (reduce trainer bottleneck + off-policy lag)
+# - max_async_level 2 → 1 (tighter sync, less stale data)
+# - Rewards: re-enable budget_utilization (0.30), reduce conversion_rate (0.50→0.20)
+# - Keep lr=3e-5, temp=0.8 (worked fine in v17)
 
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 max_steps = 100
-batch_size = 256
+batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.0
-max_async_level = 2
+max_async_level = 1
 learning_rate = 3e-5
 lora_alpha = 64
 env_file = ["../../secrets.env"]
@@ -24,7 +25,7 @@ temperature = 0.8
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 1, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "train", num_examples = 2048, num_leads = 2, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [eval]
 interval = 5
@@ -34,7 +35,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 1, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "eval", num_examples = 256, num_leads = 2, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
@@ -46,5 +47,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v17-curriculum"
+name = "qwen3-30b-salesbench-v18"
 entity = "hamza-mos-university-of-waterloo"
