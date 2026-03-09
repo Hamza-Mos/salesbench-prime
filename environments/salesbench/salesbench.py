@@ -300,18 +300,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
             runtime = state.get("runtime")
             if runtime and runtime.active_call and not runtime.done:
                 return False  # keep conversation going during a call
-
-            # Grace period: allow 1 text-only turn outside active calls
-            # before terminating.  This prevents the episode from dying
-            # when the model narrates between calls (e.g. "Moving to the
-            # next lead…") instead of directly calling a tool.
-            consecutive = state.get("_consecutive_text_only", 0) + 1
-            state["_consecutive_text_only"] = consecutive
-            if consecutive <= 1:
-                return False  # one free pass
             return True
-        # Reset counter when the model calls tools
-        state["_consecutive_text_only"] = 0
         return False
 
     async def render_completion(self, state):

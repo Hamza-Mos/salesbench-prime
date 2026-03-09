@@ -1,12 +1,10 @@
-# v19: fix episode termination + system prompt for tool discipline
-# v18 diagnosis: 78% of episodes ended prematurely via no_tools_called
-#   (model outputs text between calls → episode dies → no completion bonus
-#   → never contacts 2nd lead → only 12% revenue capture).
-# Key changes from v18:
-# - System prompt: CRITICAL RULE — every response must include a tool call
-# - System prompt: contact ALL leads, immediately start next lead after end_call
-# - no_tools_called: 1-turn grace period (don't kill for occasional narration)
-# - Config/rewards unchanged from v18 (2 leads, same weights)
+# v20: keep v19 system prompt (tool discipline), revert grace period
+# v19 problem: grace period made ALL episodes 4000-9700 tokens → 40+ min/step
+#   (no fast exits for oversampling, 67h projected for 100 steps)
+#   Also eval score LOWER than v18 (0.145 vs 0.171) despite longer episodes.
+#   Grace period kept alive bad episodes that weren't converting.
+# Fix: revert to instant no_tools_called termination, keep improved system prompt.
+# System prompt teaches "always call tools" — RL reinforces it over time.
 
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 max_steps = 100
@@ -46,5 +44,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v19"
+name = "qwen3-30b-salesbench-v20"
 entity = "hamza-mos-university-of-waterloo"
