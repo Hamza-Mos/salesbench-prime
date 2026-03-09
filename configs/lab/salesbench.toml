@@ -1,6 +1,7 @@
-# v21: revert lr from 3e-5 to 1e-5 to fix model collapse
-# v20 collapsed: lr=3e-5 caused completion to drop 98%→23% in 7 steps
-# v18 (lr=1e-5) showed steady upward trend 0.15→0.34. Keep everything else from v20.
+# v22: revert temp to 1.0 (matching v18, best run so far)
+# v20 (lr=3e-5, temp=0.8) collapsed in 7 steps. v21 (lr=1e-5, temp=0.8) collapsed in 11.
+# v18 (lr=1e-5, temp=1.0) showed steady upward trend 0.15→0.34.
+# Hypothesis: temp=0.8 reduces exploration diversity, starving GRPO of gradient signal.
 
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 max_steps = 100
@@ -14,7 +15,7 @@ env_file = ["../../secrets.env"]
 
 [sampling]
 max_tokens = 4096
-temperature = 0.8
+temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
@@ -30,5 +31,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v21"
+name = "qwen3-30b-salesbench-v22"
 entity = "hamza-mos-university-of-waterloo"
