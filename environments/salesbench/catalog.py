@@ -147,6 +147,7 @@ class ProductCatalog:
         coverage_amount: int,
         risk_class: RiskClass,
         term_years: int | None,
+        smoker: bool = False,
     ) -> dict[str, Any]:
         spec = self.get_plan(plan_type)
         if age < spec.min_age or age > spec.max_age:
@@ -173,6 +174,10 @@ class ProductCatalog:
         premium = (coverage_amount / 1000.0) * base_rate * risk_multiplier
         if plan_type == PlanType.TERM and term_years is not None:
             premium *= _TERM_MULTIPLIER[term_years]
+
+        # Non-smoker discount
+        if not smoker:
+            premium *= 0.82
 
         premium = round(premium, 2)
         return {

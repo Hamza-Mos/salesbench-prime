@@ -116,6 +116,14 @@ _TEMPERATURE_MODIFIERS: dict[LeadTemperature, dict[str, float]] = {
 
 _BUDGET_RANGE: tuple[float, float] = (0.008, 0.040)
 
+_STATED_NEEDS = [
+    "protect mortgage payments",
+    "cover children's education",
+    "replace income for spouse",
+    "supplement retirement savings",
+    "cover final expenses",
+]
+
 
 @dataclass(slots=True)
 class LeadGenerator:
@@ -160,6 +168,14 @@ class LeadGenerator:
             budget_multiplier = self._rng.uniform(*_BUDGET_RANGE)
             budget_monthly = (income / 12.0) * budget_multiplier
 
+            # Smoker — 25% chance
+            smoker = self._rng.random() < 0.25
+
+            # Stated need — 50% chance of having one
+            stated_need: str | None = None
+            if self._rng.random() < 0.50:
+                stated_need = self._rng.choice(_STATED_NEEDS)
+
             full_name = f"{self._rng.choice(_FIRST_NAMES)} {self._rng.choice(_LAST_NAMES)}"
             lead = Lead(
                 lead_id=f"lead_{idx + 1:04d}",
@@ -177,6 +193,19 @@ class LeadGenerator:
                 max_calls=max_calls,
                 temperature=temperature,
                 archetype=archetype,
+                smoker=smoker,
+                stated_need=stated_need,
             )
+
+            # Post-hoc validation
+            if lead.budget_monthly < 25:
+                lead.budget_monthly = 25.0
+            if lead.latent_need > 0.7 and lead.max_calls < 2:
+                lead.max_calls = 2
+            if lead.temperature == LeadTemperature.COLD and lead.trust_level > 0.65:
+                lead.trust_level = 0.55
+            if lead.temperature == LeadTemperature.HOT and lead.trust_level < 0.40:
+                lead.trust_level = 0.55
+
             leads.append(lead)
         return leads

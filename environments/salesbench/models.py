@@ -117,6 +117,8 @@ class Lead:
     temperature: LeadTemperature = LeadTemperature.LUKEWARM
     archetype: BuyerArchetype = BuyerArchetype.ANALYTICAL
     status: LeadStatus = LeadStatus.ACTIVE
+    smoker: bool = False
+    stated_need: str | None = None
     do_not_call: bool = False
     call_count: int = 0
     notes: list[str] = field(default_factory=list)
@@ -124,7 +126,7 @@ class Lead:
 
     def to_search_dict(self) -> dict[str, Any]:
         """Compact dict for search results — shorter keys, omits always-active status and always-false dnc."""
-        return {
+        d: dict[str, Any] = {
             "id": self.lead_id,
             "name": self.full_name,
             "age": self.age,
@@ -134,11 +136,15 @@ class Lead:
             "budget": round(self.budget_monthly, 2),
             "temp": self.temperature.value,
             "archetype": self.archetype.value,
+            "smoker": self.smoker,
             "calls": self.call_count,
         }
+        if self.stated_need is not None:
+            d["stated_need"] = self.stated_need
+        return d
 
     def to_brief_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "lead_id": self.lead_id,
             "name": self.full_name,
             "status": self.status.value,
@@ -149,9 +155,13 @@ class Lead:
             "budget_monthly": round(self.budget_monthly, 2),
             "temperature": self.temperature.value,
             "archetype": self.archetype.value,
+            "smoker": self.smoker,
             "calls_made": self.call_count,
             "do_not_call": self.do_not_call,
         }
+        if self.stated_need is not None:
+            d["stated_need"] = self.stated_need
+        return d
 
     def to_detail_dict(self) -> dict[str, Any]:
         payload = self.to_brief_dict()

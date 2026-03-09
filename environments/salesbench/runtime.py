@@ -10,6 +10,7 @@ from catalog import ProductCatalog
 from config import EpisodeConfig
 from generator import LeadGenerator
 from models import (
+    BuyerArchetype,
     BuyerDecision,
     CallbackStatus,
     CallSession,
@@ -339,6 +340,7 @@ class SalesEpisodeRuntime:
                 coverage_amount=coverage_amount,
                 risk_class=lead.risk_class,
                 term_years=term_years,
+                smoker=lead.smoker,
             )
         except ValueError as exc:
             raise RuntimeActionError(str(exc)) from exc
@@ -462,6 +464,22 @@ class SalesEpisodeRuntime:
         elif decision.decision == BuyerDecision.REJECT:
             self.stats.rejected_offers += 1
             response["msg"] = "Rejected. Try a revised offer."
+            # Deterministic suggested adjustments based on rejection reason
+            if offer.monthly_premium > lead.budget_monthly:
+                response["suggested_adjustments"] = (
+                    "try a lower coverage amount or shorter term"
+                )
+            elif (
+                lead.archetype == BuyerArchetype.BUDGET_HAWK
+                and offer.plan_type in (PlanType.WHOLE, PlanType.UL)
+            ):
+                response["suggested_adjustments"] = (
+                    "consider a term plan for lower premiums"
+                )
+            else:
+                response["suggested_adjustments"] = (
+                    "try adjusting the coverage level"
+                )
 
         elif decision.decision == BuyerDecision.HANG_UP:
             self.stats.hang_ups += 1
