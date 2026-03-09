@@ -1,8 +1,6 @@
-# v20: keep v19 system prompt (tool discipline), revert grace period
-# v19 problem: grace period made ALL episodes 4000-9700 tokens → 40+ min/step
-# Fix: revert to instant no_tools_called termination, keep improved system prompt.
-# NOTE: eval section removed due to platform regression (eval.env parsed as dict)
-# TODO: re-add [eval] when platform fixes the config validation bug
+# v21: revert lr from 3e-5 to 1e-5 to fix model collapse
+# v20 collapsed: lr=3e-5 caused completion to drop 98%→23% in 7 steps
+# v18 (lr=1e-5) showed steady upward trend 0.15→0.34. Keep everything else from v20.
 
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 max_steps = 100
@@ -10,7 +8,7 @@ batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.0
 max_async_level = 1
-learning_rate = 3e-5
+learning_rate = 1e-5
 lora_alpha = 64
 env_file = ["../../secrets.env"]
 
@@ -32,5 +30,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v20"
+name = "qwen3-30b-salesbench-v21"
 entity = "hamza-mos-university-of-waterloo"
