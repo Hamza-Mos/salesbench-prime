@@ -365,51 +365,59 @@ def _patch_eval_display_bug() -> None:
         pass  # Silently skip if framework changes in future versions
 
 
+def _coerce_int(val: Any, default: int) -> int:
+    """Coerce a value to int (platform may pass strings for numeric args)."""
+    if val is None:
+        return default
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return default
+
+
+def _coerce_float(val: Any, default: float) -> float:
+    """Coerce a value to float (platform may pass strings for numeric args)."""
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
 def load_environment(
     split: str = "train",
-    num_examples: int = 256,
-    eval_num_examples: int = 64,
-    base_seed: int = 42,
-    seed: int | None = None,
-    num_leads: int = 100,
-    total_hours: int = 80,
+    num_examples: int | str = 256,
+    eval_num_examples: int | str = 64,
+    base_seed: int | str = 42,
+    seed: int | str | None = None,
+    num_leads: int | str = 100,
+    total_hours: int | str = 80,
     buyer_policy: str = "llm",
     buyer_model: str = "gpt-5-mini",
     buyer_base_url: str = "https://api.openai.com/v1",
     buyer_api_key_var: str = "OPENAI_API_KEY",
-    # Large guardrail to emulate legacy safety_max_turns=None default.
-    max_turns: int = 10_000,
-    max_examples: int = -1,
+    max_turns: int | str = 10_000,
+    max_examples: int | str = -1,
     system_prompt: str | None = None,
-    context_rewrite_threshold: float = 0.80,
-    context_keep_recent: int = 10,
-    context_max_seq_len: int | None = None,
+    context_rewrite_threshold: float | str = 0.80,
+    context_keep_recent: int | str = 10,
+    context_max_seq_len: int | str | None = None,
 ) -> vf.Environment:
-    """Entry-point for Prime verifiers/Prime Lab.
+    """Entry-point for Prime verifiers/Prime Lab."""
 
-    Args:
-        split: Dataset split to load (train/eval/test).
-        num_examples: Number of examples for the main dataset.
-        eval_num_examples: Number of examples for eval dataset.
-        base_seed: Base seed for deterministic scenario generation.
-        seed: Optional alias for `base_seed` used by Prime eval args.
-        num_leads: Baseline leads per episode (curriculum scales around this).
-        total_hours: Total simulated hours for the episode.
-        buyer_policy: Buyer model type — "llm" (default) or "rule_based".
-        buyer_model: LLM model identifier for the buyer (used when buyer_policy="llm").
-        buyer_base_url: Base URL for the buyer LLM API.
-        buyer_api_key_var: Environment variable name for the buyer LLM API key.
-        max_turns: Safety cap on rollout turns.
-        max_examples: Optional cap after dataset construction.
-        context_rewrite_threshold: Fraction of max_seq_len at which to compress
-            older messages into a summary (default 0.80).
-        context_keep_recent: Number of recent messages to keep verbatim
-            after context summarization (default 10).
-        context_max_seq_len: Explicit max sequence length for context
-            summarization. Used when the training infrastructure doesn't
-            set max_seq_len via set_max_seq_len(). If neither is set,
-            summarization is disabled.
-    """
+    # Platform may pass numeric args as strings — coerce them.
+    num_examples = _coerce_int(num_examples, 256)
+    eval_num_examples = _coerce_int(eval_num_examples, 64)
+    base_seed = _coerce_int(base_seed, 42)
+    seed = _coerce_int(seed, None) if seed is not None else None  # type: ignore[arg-type]
+    num_leads = _coerce_int(num_leads, 100)
+    total_hours = _coerce_int(total_hours, 80)
+    max_turns = _coerce_int(max_turns, 10_000)
+    max_examples = _coerce_int(max_examples, -1)
+    context_rewrite_threshold = _coerce_float(context_rewrite_threshold, 0.80)
+    context_keep_recent = _coerce_int(context_keep_recent, 10)
+    context_max_seq_len = _coerce_int(context_max_seq_len, None) if context_max_seq_len is not None else None  # type: ignore[arg-type]
 
     resolved_seed = base_seed if seed is None else seed
 
