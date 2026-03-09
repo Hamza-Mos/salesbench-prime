@@ -1,10 +1,8 @@
 # v20: keep v19 system prompt (tool discipline), revert grace period
 # v19 problem: grace period made ALL episodes 4000-9700 tokens → 40+ min/step
-#   (no fast exits for oversampling, 67h projected for 100 steps)
-#   Also eval score LOWER than v18 (0.145 vs 0.171) despite longer episodes.
-#   Grace period kept alive bad episodes that weren't converting.
 # Fix: revert to instant no_tools_called termination, keep improved system prompt.
-# System prompt teaches "always call tools" — RL reinforces it over time.
+# NOTE: eval section removed due to platform regression (eval.env parsed as dict)
+# TODO: re-add [eval] when platform fixes the config validation bug
 
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 max_steps = 100
@@ -23,16 +21,6 @@ temperature = 0.8
 [[env]]
 id = "salesbench/salesbench"
 args = { split = "train", num_examples = 2048, num_leads = 2, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
-
-[eval]
-interval = 5
-num_examples = 16
-rollouts_per_example = 2
-eval_base_model = true
-
-[[eval.env]]
-id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 256, num_leads = 2, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
