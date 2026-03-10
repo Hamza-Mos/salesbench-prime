@@ -1,11 +1,12 @@
-# v25: resume from v23 step 195 checkpoint + v24 env (0.19.0) + reward reweight
+# v25: v24 env (0.19.0) + reward reweight toward budget utilization
 # v23 hit 1.41 peak (step 194) over 200 steps — 93% conversion, 82% budget capture
 # v24 env adds stated_need, smoker pricing, suggested_adjustments (no LLM cost increase)
 # Reward reweight: shift from saturated completion/conversion → budget utilization
+# NOTE: checkpoint_id warm-start failed (platform bug: weights not restored for completed runs)
+# Training from scratch — golden config reaches v23-level in ~100 steps
 
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
-checkpoint_id = "ukux36wuiuka1vxj8ppvlqci"
-max_steps = 300
+max_steps = 200
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
