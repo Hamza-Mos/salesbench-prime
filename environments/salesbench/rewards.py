@@ -233,12 +233,12 @@ _REWARD_FUNCS = [
 
 _REWARD_WEIGHTS = [
     1.00,   # reward_revenue_mrr        — primary objective: maximize normalized revenue
-    0.20,   # reward_conversion_rate     — reduced from 0.50; with 2 leads MRR captures value better
+    0.10,   # reward_conversion_rate     — halved: near ceiling at 93% (1.87/2.0 leads)
     0.00,   # reward_efficiency          — disabled
     -0.30,  # penalty_dnc_violations     — hard compliance
     -0.05,  # penalty_invalid_actions    — keep low; unavoidable schema errors add noise
-    0.15,   # reward_episode_completion  — incentivize finishing episodes cleanly
-    0.30,   # reward_budget_utilization  — re-enabled: model can convert, now optimize revenue capture
+    0.05,   # reward_episode_completion  — slashed: 95%+ already completing, minimal gradient signal
+    0.45,   # reward_budget_utilization  — boosted: model converts well, now maximize revenue capture
 ]
 
 _STATE_METRICS = [metric_context_summary_count]
