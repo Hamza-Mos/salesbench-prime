@@ -241,7 +241,39 @@ _REWARD_WEIGHTS = [
     0.35,   # reward_budget_utilization  — reduced: conversion matters more at higher difficulty
 ]
 
-_STATE_METRICS = [metric_context_summary_count]
+_ERROR_TYPE_MAP = {
+    "BadRequestError": 1.0,
+    "APITimeoutError": 2.0,
+    "APIConnectionError": 3.0,
+    "RateLimitError": 4.0,
+    "InternalServerError": 5.0,
+    "APIStatusError": 6.0,
+    "APIError": 7.0,
+}
+
+_error_logger = __import__("logging").getLogger("verifiers.salesbench.errors")
+
+
+async def metric_error_type(state: dict[str, Any]) -> float:
+    """Encode the original error type as a float for metric tracking.
+
+    0=no error, 1=BadRequest, 2=Timeout, 3=Connection, 4=RateLimit,
+    5=InternalServer, 6=APIStatus, 7=APIError, 9=unknown.
+    Also logs the full cause so it appears in ``prime rl logs``.
+    """
+    err = state.get("error")
+    if err is None:
+        return 0.0
+    cause = getattr(err, "__cause__", None)
+    if cause is not None:
+        cause_name = type(cause).__name__
+        _error_logger.error("ModelError cause: %s: %s", cause_name, cause)
+        return _ERROR_TYPE_MAP.get(cause_name, 9.0)
+    _error_logger.error("ModelError (no __cause__): %s", err)
+    return 8.0
+
+
+_STATE_METRICS = [metric_context_summary_count, metric_error_type]
 
 _ALL_METRICS = _GENERATED_METRICS + _STATE_METRICS + _BUYER_LLM_METRICS
 RUBRIC_FUNCS = _REWARD_FUNCS + _ALL_METRICS
