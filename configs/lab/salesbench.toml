@@ -1,8 +1,9 @@
-# v26: scale to 3 leads (v25 saturated 2 leads at 99% ceiling)
-# v25 best: n681l2qdddtsym5e88uppq0b (completed 200 steps, peak 1.451)
+# v27: 3 leads + error logging (v0.20.1), 500 steps for mid-run env swap to 4 leads
+# v26 best: nuiukm339bhri6y202g3hndv (completed 200 steps, peak 1.354)
+# Plan: monitor, when plateau push env with num_leads=4, stop & restart
 
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
-max_steps = 200
+max_steps = 500
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
@@ -29,5 +30,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v26"
+name = "qwen3-30b-salesbench-v27"
 entity = "hamza-mos-university-of-waterloo"
