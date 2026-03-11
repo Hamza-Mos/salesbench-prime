@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from typing import Any
 
@@ -249,31 +250,145 @@ _ERROR_TYPE_MAP = {
     "InternalServerError": 5.0,
     "APIStatusError": 6.0,
     "APIError": 7.0,
+    "ContentFilterFinishReasonError": 10.0,
+    "LengthFinishReasonError": 11.0,
+    "JSONDecodeError": 12.0,
+    "ValueError": 13.0,
+    "RuntimeActionError": 14.0,
+    "TypeError": 15.0,
+    "RuntimeError": 16.0,
+    "PermissionDeniedError": 17.0,
+    "NotFoundError": 18.0,
+    "UnprocessableEntityError": 20.0,
 }
 
-_error_logger = __import__("logging").getLogger("verifiers.salesbench.errors")
+def _get_error_cause(state: dict[str, Any]) -> tuple[BaseException | None, BaseException | None]:
+    """Extract (error, cause) from state. Returns (None, None) if no error."""
+    err = state.get("error")
+    if err is None:
+        return None, None
+    return err, getattr(err, "__cause__", None)
 
 
 async def metric_error_type(state: dict[str, Any]) -> float:
     """Encode the original error type as a float for metric tracking.
 
     0=no error, 1=BadRequest, 2=Timeout, 3=Connection, 4=RateLimit,
-    5=InternalServer, 6=APIStatus, 7=APIError, 9=unknown.
-    Also logs the full cause so it appears in ``prime rl logs``.
+    5=InternalServer, 6=APIStatus, 7=APIError, 8=no cause, 9=unknown,
+    10=ContentFilter, 11=LengthFinish, 12=JSONDecode, 13=ValueError,
+    14=RuntimeActionError, 15=TypeError, 16=RuntimeError, 17=PermDenied,
+    18=NotFound, 20=Unprocessable.
     """
-    err = state.get("error")
+    err, cause = _get_error_cause(state)
     if err is None:
         return 0.0
-    cause = getattr(err, "__cause__", None)
     if cause is not None:
         cause_name = type(cause).__name__
-        _error_logger.error("ModelError cause: %s: %s", cause_name, cause)
+        # best-effort print to stdout+stderr — platform may capture one or both
+        try:
+            msg = f"[SALESBENCH] ModelError cause: {cause_name}: {str(cause)[:500]}"
+            print(msg, flush=True, file=sys.stderr)
+            print(msg, flush=True)
+        except Exception:
+            pass
         return _ERROR_TYPE_MAP.get(cause_name, 9.0)
-    _error_logger.error("ModelError (no __cause__): %s", err)
+    try:
+        msg = f"[SALESBENCH] ModelError (no __cause__): {str(err)[:500]}"
+        print(msg, flush=True, file=sys.stderr)
+        print(msg, flush=True)
+    except Exception:
+        pass
     return 8.0
 
 
-_STATE_METRICS = [metric_context_summary_count, metric_error_type]
+async def metric_error_status_code(state: dict[str, Any]) -> float:
+    """HTTP status code from API errors (e.g., 400, 429, 500). 0 if no error."""
+    _, cause = _get_error_cause(state)
+    if cause is None:
+        return 0.0
+    status = getattr(cause, "status_code", None)
+    if status is None:
+        return 0.0
+    try:
+        return float(status)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+_ERROR_BODY_TYPE_MAP = {
+    "invalid_request_error": 1.0,
+    "authentication_error": 2.0,
+    "rate_limit_error": 3.0,
+    "server_error": 4.0,
+    "timeout_error": 5.0,
+    "not_found_error": 6.0,
+    "permission_error": 7.0,
+}
+
+
+async def metric_error_body_type(state: dict[str, Any]) -> float:
+    """API error type from cause.type (structured OpenAI field, not string matching).
+
+    0=no error/non-API, 1=invalid_request, 2=auth, 3=rate_limit,
+    4=server, 5=timeout, 6=not_found, 7=permission, 9=unknown type string.
+    """
+    _, cause = _get_error_cause(state)
+    if cause is None:
+        return 0.0
+    error_type = getattr(cause, "type", None)
+    if not isinstance(error_type, str):
+        return 0.0
+    return _ERROR_BODY_TYPE_MAP.get(error_type, 9.0)
+
+
+_ERROR_CODE_MAP = {
+    "context_length_exceeded": 1.0,
+    "content_filter": 2.0,
+    "rate_limit_exceeded": 3.0,
+    "model_not_found": 4.0,
+    "invalid_api_key": 5.0,
+    "server_error": 6.0,
+}
+
+
+async def metric_error_body_code(state: dict[str, Any]) -> float:
+    """API error code from cause.code (structured OpenAI field).
+
+    0=no error/no code, 1=context_length_exceeded, 2=content_filter,
+    3=rate_limit_exceeded, 4=model_not_found, 5=invalid_api_key,
+    6=server_error, 9=unknown code string.
+    """
+    _, cause = _get_error_cause(state)
+    if cause is None:
+        return 0.0
+    error_code = getattr(cause, "code", None)
+    if not isinstance(error_code, str):
+        return 0.0
+    return _ERROR_CODE_MAP.get(error_code, 9.0)
+
+
+async def metric_error_has_body(state: dict[str, Any]) -> float:
+    """Whether the error cause has a parseable body dict.
+
+    0=no error/no body, 1=has body dict (OpenAI or vLLM format).
+    Useful to distinguish API errors (body=dict) from local exceptions (body=None).
+    When body_type=0 AND has_body=1, the error is likely vLLM FastAPI format.
+    """
+    _, cause = _get_error_cause(state)
+    if cause is None:
+        return 0.0
+    body = getattr(cause, "body", None)
+    return 1.0 if isinstance(body, dict) else 0.0
+
+
+_STATE_METRICS = [
+    metric_context_summary_count,
+    metric_error_type,
+    metric_error_status_code,
+    metric_error_body_type,
+    metric_error_body_code,
+    metric_error_has_body,
+]
 
 _ALL_METRICS = _GENERATED_METRICS + _STATE_METRICS + _BUYER_LLM_METRICS
 RUBRIC_FUNCS = _REWARD_FUNCS + _ALL_METRICS
