@@ -1,9 +1,10 @@
-# v28: 4 leads + v0.23.0 env (3-party separation, buyer error isolation, shaped completion)
-# v27 best so far: tgojv1pxq7t8tqk87y1aae0u (step 111, peak 1.400, 3-lead plateau)
-# Curriculum: 2→3→4 leads. Resuming from v27 checkpoint with new env.
+# v29: 5 leads — curriculum step from v28's 4-lead near-saturation (step ~365, peak 1.528, 95.5% ceiling)
+# v28 best: k87pq6aqem5nqc2hucgkjy5n (4 leads, clean avg ~1.51, conv 94.5%, budget 94.5%)
+# Curriculum: 2→3→4→5 leads. Resuming from v28 checkpoint.
 
+checkpoint_id = "if77ga2x9csotc8y4117s7jg"
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
-max_steps = 500
+max_steps = 800
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
@@ -18,7 +19,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "train", num_examples = 2048, num_leads = 5, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
@@ -30,5 +31,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v28"
+name = "qwen3-30b-salesbench-v29"
 entity = "hamza-mos-university-of-waterloo"
