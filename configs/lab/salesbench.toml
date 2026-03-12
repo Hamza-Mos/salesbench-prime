@@ -1,6 +1,6 @@
-# v27: 3 leads + error logging (v0.20.1), 500 steps for mid-run env swap to 4 leads
-# v26 best: nuiukm339bhri6y202g3hndv (completed 200 steps, peak 1.354)
-# Plan: monitor, when plateau push env with num_leads=4, stop & restart
+# v28: 4 leads + v0.23.0 env (3-party separation, buyer error isolation, shaped completion)
+# v27 best so far: tgojv1pxq7t8tqk87y1aae0u (step 111, peak 1.400, 3-lead plateau)
+# Curriculum: 2→3→4 leads. Resuming from v27 checkpoint with new env.
 
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 max_steps = 500
@@ -18,7 +18,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 3, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
@@ -30,5 +30,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v27"
+name = "qwen3-30b-salesbench-v28"
 entity = "hamza-mos-university-of-waterloo"

@@ -1,13 +1,21 @@
-"""Tool definitions exposed to the model in the new stateful harness."""
+"""Tool definitions exposed to the model in the new stateful harness.
+
+Tools are thin wrappers around :class:`SalesEpisodeRuntime` methods.  All
+tools are deterministic except ``calling_propose_offer`` which delegates to
+the buyer policy (injected by the orchestrator via ``update_tool_args``).
+Buyer LLM failures are isolated — they produce a deterministic REJECT
+fallback instead of penalizing the seller with an ``invalid_action``.
+"""
 
 from __future__ import annotations
 
+import inspect
 import json
 import logging
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable
 from typing import Any
 
-from models import RuntimeActionError
+from models import BuyerDecision, DecisionResult, RuntimeActionError
 from runtime import SalesEpisodeRuntime
 
 logger = logging.getLogger("verifiers.salesbench")
@@ -22,28 +30,10 @@ def _safe_tool_call(
     tool_name: str,
     fn: Callable[[], dict[str, Any]],
 ) -> str:
+    """Execute a deterministic tool call with error handling."""
     runtime.register_tool_call(tool_name)
     try:
         data = fn()
-        return _as_json({"ok": True, **data})
-    except RuntimeActionError as exc:
-        logger.warning("Invalid action in %s: %s", tool_name, exc)
-        runtime.record_invalid_action(str(exc))
-        return _as_json({"ok": False, "error": str(exc)})
-    except Exception as exc:  # pragma: no cover - defensive boundary
-        logger.warning("Unexpected error in %s: %s", tool_name, exc)
-        runtime.record_invalid_action(f"unexpected error: {exc}")
-        return _as_json({"ok": False, "error": f"unexpected error: {exc}"})
-
-
-async def _safe_tool_call_async(
-    runtime: SalesEpisodeRuntime,
-    tool_name: str,
-    coro: Coroutine[Any, Any, dict[str, Any]],
-) -> str:
-    runtime.register_tool_call(tool_name)
-    try:
-        data = await coro
         return _as_json({"ok": True, **data})
     except RuntimeActionError as exc:
         logger.warning("Invalid action in %s: %s", tool_name, exc)
@@ -154,21 +144,67 @@ async def calling_propose_offer(
     next_step: str,
     term_years: int | None = None,
     messages: list | None = None,
+    buyer_policy: Any = None,
 ) -> str:
-    """Propose an offer to the buyer. Decisions: ACCEPT, REJECT, or HANG_UP. Quote first."""
+    """Propose an offer to the buyer. Decisions: ACCEPT, REJECT, or HANG_UP. Quote first.
 
-    return await _safe_tool_call_async(
-        runtime,
-        "calling_propose_offer",
-        runtime.propose_offer(
+    This is the only tool that involves a buyer LLM call.  The buyer policy is
+    injected by the orchestrator (``update_tool_args``).  Buyer failures produce
+    a deterministic REJECT — the seller is never penalized for buyer errors.
+    """
+    runtime.register_tool_call("calling_propose_offer")
+
+    # --- Step 1: Record offer (deterministic — seller errors ARE invalid_actions) ---
+    try:
+        result = runtime.record_offer(
             plan_type=plan_type,
             coverage_amount=coverage_amount,
             monthly_premium=monthly_premium,
             next_step=next_step,
             term_years=term_years,
-            messages=messages,
-        ),
+        )
+    except RuntimeActionError as exc:
+        logger.warning("Invalid action in calling_propose_offer: %s", exc)
+        runtime.record_invalid_action(str(exc))
+        return _as_json({"ok": False, "error": str(exc)})
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Unexpected error in calling_propose_offer: %s", exc)
+        runtime.record_invalid_action(f"unexpected error: {exc}")
+        return _as_json({"ok": False, "error": f"unexpected error: {exc}"})
+
+    # Time expired during recording
+    if result.get("interrupted"):
+        return _as_json({"ok": True, "decision": {"decision": "interrupted", "reason": "time expired"}})
+
+    offer = result["offer"]
+    lead = result["lead"]
+
+    # --- Step 2: Buyer evaluation (buyer errors → fallback, NOT seller penalty) ---
+    try:
+        decision_or_coro = buyer_policy.evaluate_offer(
+            lead=lead, offer=offer, messages=messages,
+        )
+        if inspect.isawaitable(decision_or_coro):
+            decision: DecisionResult = await decision_or_coro
+        else:
+            decision = decision_or_coro
+    except Exception as exc:
+        logger.warning("Buyer policy failed, using deterministic REJECT: %s", exc)
+        decision = DecisionResult(
+            decision=BuyerDecision.REJECT,
+            reason="I need some time to think about this.",
+            score=0.40,
+            request_dnc=False,
+        )
+
+    # --- Step 3: Apply decision to state (deterministic) ---
+    response = runtime.apply_buyer_decision(
+        decision=decision.decision,
+        reason=decision.reason,
+        request_dnc=decision.request_dnc,
     )
+
+    return _as_json({"ok": True, **response})
 
 
 async def calling_end_call(runtime: SalesEpisodeRuntime, disposition: str = "follow_up") -> str:

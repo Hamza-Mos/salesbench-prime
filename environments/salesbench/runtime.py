@@ -1,9 +1,14 @@
-"""Stateful sales simulation runtime for Prime verifiers tooling."""
+"""Stateful sales simulation runtime for Prime verifiers tooling.
+
+This module is a **pure deterministic state machine** — it contains zero LLM
+calls.  All buyer LLM interactions are handled by the orchestrator layer
+(``salesbench.py``) which owns the buyer policy and routes decisions back
+here via :meth:`apply_buyer_decision`.
+"""
 
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any
 
 from catalog import ProductCatalog
@@ -22,7 +27,6 @@ from models import (
     PlanType,
     RuntimeActionError,
 )
-from policy import LLMBuyerPolicy, RuleBasedBuyerPolicy
 
 logger = logging.getLogger("verifiers.salesbench")
 
@@ -48,14 +52,6 @@ class SalesEpisodeRuntime:
         config.validate()
         self.config = config
         self.catalog = ProductCatalog()
-        if config.buyer_policy == "llm":
-            self.policy: RuleBasedBuyerPolicy | LLMBuyerPolicy = LLMBuyerPolicy(
-                model=config.buyer_model,
-                base_url=config.buyer_base_url,
-                api_key=os.getenv(config.buyer_api_key_var, ""),
-            )
-        else:
-            self.policy = RuleBasedBuyerPolicy(seed=config.seed + 17)
 
         leads = LeadGenerator(seed=config.seed).generate(
             config.num_leads
@@ -353,10 +349,13 @@ class SalesEpisodeRuntime:
             "ratio": round(affordability_ratio, 3),
         }
 
-    async def conversation_turn(
-        self, *, agent_text: str, messages: list | None = None
-    ) -> str | None:
-        """Process one agent->buyer conversation exchange. Returns buyer reply or None."""
+    def advance_conversation(self, agent_text: str) -> Lead | None:
+        """Advance time for a conversation turn.
+
+        Returns the active lead if the buyer should respond, or ``None`` if the
+        call ended or the agent sent empty text.  The caller (orchestrator) is
+        responsible for obtaining the actual buyer reply from the buyer policy.
+        """
         if self.active_call is None or self.done:
             return None
         if not agent_text.strip():
@@ -368,19 +367,10 @@ class SalesEpisodeRuntime:
         if self.done:
             return None  # time ran out during advance
 
-        if isinstance(self.policy, LLMBuyerPolicy):
-            buyer_reply = await self.policy.generate_response(
-                lead=lead, agent_message=agent_text, messages=messages
-            )
-        else:
-            buyer_reply = self.policy.generate_response(
-                lead=lead, agent_message=agent_text
-            )
-
         self.active_call.messages_sent += 1
-        return buyer_reply
+        return lead
 
-    async def propose_offer(
+    def record_offer(
         self,
         *,
         plan_type: str,
@@ -388,8 +378,13 @@ class SalesEpisodeRuntime:
         monthly_premium: float,
         next_step: str,
         term_years: int | None,
-        messages: list | None = None,
     ) -> dict[str, Any]:
+        """Record an offer on the active call.  Pure deterministic — no buyer LLM.
+
+        Returns ``{"offer": Offer, "lead": Lead}`` on success, or
+        ``{"interrupted": True}`` if time expired during the time advance.
+        Raises :class:`RuntimeActionError` for invalid seller actions.
+        """
         # Coerce args — LLMs often pass strings instead of ints/floats.
         coverage_amount = int(coverage_amount)
         monthly_premium = float(monthly_premium)
@@ -422,31 +417,40 @@ class SalesEpisodeRuntime:
         self._advance(self.config.tool_costs.propose_offer_minutes, "propose_offer")
 
         # Time may have expired during _advance, which finalizes the active
-        # call (setting it to None).  Return early to avoid AttributeError.
+        # call (setting it to None).
         if self.done:
-            return {
-                "decision": {"decision": "interrupted", "reason": "time expired"},
-            }
+            return {"interrupted": True}
 
-        if isinstance(self.policy, LLMBuyerPolicy):
-            decision = await self.policy.evaluate_offer(
-                lead=lead, offer=offer, messages=messages
-            )
-        else:
-            decision = self.policy.evaluate_offer(lead=lead, offer=offer)
-        logger.debug(
-            "Offer proposed: lead=%s plan=%s premium=%.2f decision=%s",
-            lead.lead_id,
-            plan.value,
-            monthly_premium,
-            decision.decision.value,
-        )
+        return {"offer": offer, "lead": lead}
+
+    def apply_buyer_decision(
+        self,
+        *,
+        decision: BuyerDecision,
+        reason: str,
+        request_dnc: bool,
+    ) -> dict[str, Any]:
+        """Apply a buyer decision to the active call.  Pure deterministic.
+
+        Must be called after :meth:`record_offer` returned successfully
+        (not interrupted).  The buyer policy (LLM or rule-based) lives in the
+        orchestrator layer — this method only mutates state.
+        """
+        if self.active_call is None:
+            raise RuntimeActionError("no active call to apply decision to")
+
+        lead = self._get_lead_or_error(self.active_call.lead_id)
+        offer = self.active_call.offers[-1]
 
         response: dict[str, Any] = {
-            "decision": decision.to_dict(),
+            "decision": {
+                "decision": decision.value,
+                "reason": reason,
+                "request_dnc": request_dnc,
+            },
         }
 
-        if decision.decision == BuyerDecision.ACCEPT:
+        if decision == BuyerDecision.ACCEPT:
             lead.status = LeadStatus.CONVERTED
             lead.accepted_offer = offer
             self.active_call.outcome = BuyerDecision.ACCEPT
@@ -461,7 +465,7 @@ class SalesEpisodeRuntime:
                 self.stats.revenue_mrr,
             )
 
-        elif decision.decision == BuyerDecision.REJECT:
+        elif decision == BuyerDecision.REJECT:
             self.stats.rejected_offers += 1
             response["msg"] = "Rejected. Try a revised offer."
             # Deterministic suggested adjustments based on rejection reason
@@ -481,11 +485,11 @@ class SalesEpisodeRuntime:
                     "try adjusting the coverage level"
                 )
 
-        elif decision.decision == BuyerDecision.HANG_UP:
+        elif decision == BuyerDecision.HANG_UP:
             self.stats.hang_ups += 1
             self.active_call.outcome = BuyerDecision.HANG_UP
             response["msg"] = "Hung up."
-            if decision.request_dnc:
+            if request_dnc:
                 lead.status = LeadStatus.DNC
                 lead.do_not_call = True
                 response["msg"] += " DNC requested."
@@ -493,7 +497,7 @@ class SalesEpisodeRuntime:
             self._finalize_active_call(reason="buyer_hang_up")
 
         # Store buyer's spoken response for conversation injection
-        self._pending_buyer_speech = f"[{lead.full_name} (buyer)]: {decision.reason}"
+        self._pending_buyer_speech = f"[{lead.full_name} (buyer)]: {reason}"
 
         self._check_termination()
         return response
@@ -506,8 +510,15 @@ class SalesEpisodeRuntime:
             raise RuntimeActionError("disposition cannot be empty")
 
         self._advance(self.config.tool_costs.end_call_minutes, "end_call")
-        call = self._finalize_active_call(reason=disposition)
-        self._check_termination()
+
+        # _advance may have triggered time-based termination which already
+        # finalized the active call.  Return the finalized call's info
+        # instead of raising a spurious "no active call" error.
+        if self.active_call is None:
+            call = self.call_history[-1]
+        else:
+            call = self._finalize_active_call(reason=disposition)
+            self._check_termination()
         return {
             "call_id": call.call_id,
             "duration": call.duration_minutes,

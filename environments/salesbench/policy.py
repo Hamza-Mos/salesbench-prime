@@ -310,6 +310,44 @@ Set request_dnc to true only if you are hanging up AND want to be placed on a do
 (e.g. too many calls, feeling harassed)."""
 
 
+def _is_buyer_speech(content: str) -> bool:
+    """Check if a user-role message is actual buyer speech (injected by env_response).
+
+    Buyer speech is always formatted as ``[Full Name (buyer)]: reply text``
+    by salesbench.py.  Other user-role messages (briefings, context summaries,
+    tool results) should NOT be shown to the buyer LLM.
+    """
+    return content.startswith("[") and "(buyer)]:" in content
+
+
+def _build_buyer_conversation_context(messages: list | None) -> list[dict[str, str]]:
+    """Extract seller-buyer conversation turns for the buyer LLM.
+
+    Keeps only:
+    - Seller speech (role=assistant with text content) → flipped to "user"
+    - Buyer's own prior replies (role=user matching buyer speech pattern) → flipped to "assistant"
+
+    Filters out: system prompts, tool results (role=tool), briefings,
+    context summaries, and other infrastructure user messages.
+    """
+    if not messages:
+        return []
+    result: list[dict[str, str]] = []
+    for msg in messages:
+        role = msg.get("role", "")
+        content = msg.get("content") or ""
+        content = str(content).strip()
+        if not content:
+            continue
+        if role == "assistant":
+            # Seller's speech → buyer sees as "user" (what agent said to me)
+            result.append({"role": "user", "content": content})
+        elif role == "user" and _is_buyer_speech(content):
+            # Buyer's own prior speech → buyer sees as "assistant" (what I said)
+            result.append({"role": "assistant", "content": content})
+    return result
+
+
 def _build_buyer_conversation_prompt(lead: Lead) -> str:
     """Build an instance-specific conversation prompt with archetype personality."""
     profile = ARCHETYPE_PROFILES[lead.archetype]
@@ -418,15 +456,7 @@ class LLMBuyerPolicy:
         offer_description += f". Next step: {offer.next_step}"
 
         llm_messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
-
-        if messages:
-            for msg in messages:
-                role = msg.get("role", "")
-                content = msg.get("content", "")
-                if role in ("user", "assistant") and content:
-                    buyer_role = "user" if role == "assistant" else "assistant"
-                    llm_messages.append({"role": buyer_role, "content": str(content)})
-
+        llm_messages.extend(_build_buyer_conversation_context(messages))
         llm_messages.append({"role": "user", "content": offer_description})
 
         t0 = time.monotonic()
@@ -435,7 +465,7 @@ class LLMBuyerPolicy:
                 model=self.model,
                 messages=llm_messages,
                 temperature=1.0,
-                max_completion_tokens=16384,
+                max_completion_tokens=4096,
                 response_format={"type": "json_object"},
             )
             raw = response.choices[0].message.content or "{}"
@@ -497,15 +527,7 @@ class LLMBuyerPolicy:
         system_prompt = _build_buyer_conversation_prompt(lead)
 
         llm_messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
-
-        if messages:
-            for msg in messages:
-                role = msg.get("role", "")
-                content = msg.get("content", "")
-                if role in ("user", "assistant") and content:
-                    buyer_role = "user" if role == "assistant" else "assistant"
-                    llm_messages.append({"role": buyer_role, "content": str(content)})
-
+        llm_messages.extend(_build_buyer_conversation_context(messages))
         llm_messages.append({"role": "user", "content": agent_message})
 
         t0 = time.monotonic()
@@ -514,7 +536,7 @@ class LLMBuyerPolicy:
                 model=self.model,
                 messages=llm_messages,
                 temperature=1.0,
-                max_completion_tokens=16384,
+                max_completion_tokens=4096,
             )
             raw = response.choices[0].message.content or ""
         except openai.APITimeoutError as exc:

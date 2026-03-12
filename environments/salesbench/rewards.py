@@ -42,15 +42,6 @@ async def reward_conversion_rate(state: dict[str, Any]) -> float:
     return runtime.stats.conversions / max(1, runtime.config.num_leads)
 
 
-async def reward_efficiency(state: dict[str, Any]) -> float:
-    """Reward efficiency as conversions per call started."""
-
-    runtime = _get_runtime(state)
-    if runtime is None:
-        return 0.0
-    return runtime.stats.conversions / max(1, runtime.stats.calls_started)
-
-
 async def penalty_dnc_violations(state: dict[str, Any]) -> float:
     """Compliance penalty for do-not-call violations."""
 
@@ -70,12 +61,26 @@ async def penalty_invalid_actions(state: dict[str, Any]) -> float:
 
 
 async def reward_episode_completion(state: dict[str, Any]) -> float:
-    """Bonus for completing the episode (not truncated by infrastructure)."""
+    """Shaped completion bonus based on termination quality.
+
+    * ``pipeline_exhausted`` (processed all leads) → 1.0
+    * ``time_budget_exhausted`` (used all time) → 0.5
+    * ``invalid_action_limit_reached`` (broke things) → 0.0
+    * Not done yet → 0.0
+    """
 
     runtime = _get_runtime(state)
     if runtime is None:
         return 0.0
-    return 1.0 if runtime.done else 0.0
+    if not runtime.done:
+        return 0.0
+
+    _TERMINATION_SCORES: dict[str | None, float] = {
+        "pipeline_exhausted": 1.0,
+        "time_budget_exhausted": 0.5,
+        "invalid_action_limit_reached": 0.0,
+    }
+    return _TERMINATION_SCORES.get(runtime.termination_reason, 0.0)
 
 
 async def reward_budget_utilization(state: dict[str, Any]) -> float:
@@ -170,12 +175,10 @@ async def metric_context_summary_count(state: dict[str, Any]) -> float:
 # ---------------------------------------------------------------------------
 
 def _get_llm_policy(state: dict[str, Any]):
-    """Return the LLMBuyerPolicy from runtime, or None."""
+    """Return the LLMBuyerPolicy from state, or None."""
     from policy import LLMBuyerPolicy
-    rt = _get_runtime(state)
-    if rt is None:
-        return None
-    return rt.policy if isinstance(rt.policy, LLMBuyerPolicy) else None
+    policy = state.get("buyer_policy")
+    return policy if isinstance(policy, LLMBuyerPolicy) else None
 
 
 async def metric_buyer_llm_call_count(state: dict[str, Any]) -> float:
@@ -225,7 +228,6 @@ _BUYER_LLM_METRICS = [
 _REWARD_FUNCS = [
     reward_revenue_mrr,
     reward_conversion_rate,
-    reward_efficiency,
     penalty_dnc_violations,
     penalty_invalid_actions,
     reward_episode_completion,
@@ -235,10 +237,9 @@ _REWARD_FUNCS = [
 _REWARD_WEIGHTS = [
     1.00,   # reward_revenue_mrr        — primary objective: maximize normalized revenue
     0.15,   # reward_conversion_rate     — raised: 3 leads harder, need conversion signal
-    0.00,   # reward_efficiency          — disabled
-    -0.30,  # penalty_dnc_violations     — hard compliance
+    -0.30,  # penalty_dnc_violations     — hard compliance (safety rail)
     -0.05,  # penalty_invalid_actions    — keep low; unavoidable schema errors add noise
-    0.10,   # reward_episode_completion  — raised: 3 leads = longer episodes, completion may drop
+    0.10,   # reward_episode_completion  — shaped: pipeline_exhausted=1.0, time=0.5, invalid=0.0
     0.35,   # reward_budget_utilization  — reduced: conversion matters more at higher difficulty
 ]
 

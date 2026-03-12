@@ -1,6 +1,24 @@
+"""SalesBench Prime RL environment — orchestrator layer.
+
+This module implements the 3-party orchestration pattern (inspired by
+tau2-bench):
+
+* **Runtime** (``runtime.py``) — pure deterministic state machine
+* **Buyer policy** (``policy.py``) — LLM or rule-based buyer participant
+* **Orchestrator** (this file) — routes between runtime and buyer, owns
+  the buyer policy, handles error isolation and context compression
+
+The buyer policy is created per-episode in :meth:`setup_state` and stored
+in ``state["buyer_policy"]``.  It is injected into tool functions that
+need it via :meth:`update_tool_args`.  Buyer LLM failures are isolated
+from seller scoring — they never produce ``invalid_action`` penalties.
+"""
+
 from __future__ import annotations
 
+import inspect
 import logging
+import os
 from typing import Any
 
 from datasets import Dataset
@@ -9,6 +27,7 @@ import verifiers as vf
 
 from config import EpisodeConfig
 from dataset import build_salesbench_dataset
+from policy import LLMBuyerPolicy, RuleBasedBuyerPolicy
 from rewards import RUBRIC_FUNCS, RUBRIC_WEIGHTS
 from runtime import SalesEpisodeRuntime
 from tools import ALL_TOOLS
@@ -65,6 +84,10 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         context_rewrite_threshold: float = 0.80,
         context_keep_recent: int = 10,
         context_max_seq_len: int | None = None,
+        buyer_policy_type: str = "llm",
+        buyer_model: str = "gpt-5-mini",
+        buyer_base_url: str = "https://api.openai.com/v1",
+        buyer_api_key_var: str = "OPENAI_API_KEY",
         **kwargs: Any,
     ) -> None:
         self.default_seed = default_seed
@@ -73,6 +96,12 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         self.context_rewrite_threshold = context_rewrite_threshold
         self.context_keep_recent = context_keep_recent
         self.context_max_seq_len = context_max_seq_len
+
+        # Buyer policy config — used per-episode in setup_state
+        self.buyer_policy_type = buyer_policy_type
+        self.buyer_model = buyer_model
+        self.buyer_base_url = buyer_base_url
+        self.buyer_api_key_var = buyer_api_key_var
 
         rubric = vf.Rubric(funcs=RUBRIC_FUNCS, weights=RUBRIC_WEIGHTS)
         super().__init__(
@@ -86,7 +115,11 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         )
 
         for tool in ALL_TOOLS:
-            self.add_tool(tool, args_to_skip=["runtime", "messages"])
+            self.add_tool(tool, args_to_skip=["runtime", "messages", "buyer_policy"])
+
+    # ------------------------------------------------------------------
+    # State setup
+    # ------------------------------------------------------------------
 
     async def setup_state(self, state: vf.State) -> vf.State:
         input_data = state.get("input", {})
@@ -101,7 +134,18 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         )
         runtime = SalesEpisodeRuntime(config=config)
 
+        # Buyer policy — separate participant, NOT inside runtime
+        if self.buyer_policy_type == "llm":
+            buyer_policy: LLMBuyerPolicy | RuleBasedBuyerPolicy = LLMBuyerPolicy(
+                model=self.buyer_model,
+                base_url=self.buyer_base_url,
+                api_key=os.getenv(self.buyer_api_key_var, ""),
+            )
+        else:
+            buyer_policy = RuleBasedBuyerPolicy(seed=config.seed + 17)
+
         state["runtime"] = runtime
+        state["buyer_policy"] = buyer_policy
         state["episode_config"] = config.to_dict()
         state["episode_seed"] = config.seed
         logger.info(
@@ -125,6 +169,10 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
 
         return state
 
+    # ------------------------------------------------------------------
+    # Tool argument injection
+    # ------------------------------------------------------------------
+
     def update_tool_args(
         self,
         tool_name: str,
@@ -143,6 +191,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         updated["runtime"] = runtime
         if tool_name == "calling_propose_offer":
             updated["messages"] = messages
+            updated["buyer_policy"] = state.get("buyer_policy")
         return updated
 
     # ------------------------------------------------------------------
@@ -199,22 +248,30 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         recent = messages[-keep_recent:]
 
         summary_text = runtime.render_context_summary()
-        summary_msg = {"role": "user", "content": summary_text}
+
+        # Avoid consecutive user messages at the summary/recent boundary.
+        # If the first recent message is also role=user (e.g. buyer speech),
+        # merge the summary into it instead of inserting a separate message.
+        if recent and recent[0].get("role") == "user":
+            merged = {
+                "role": "user",
+                "content": summary_text + "\n\n" + str(recent[0].get("content", "")),
+            }
+            compressed = prefix + [merged] + recent[1:]
+        else:
+            compressed = prefix + [{"role": "user", "content": summary_text}] + recent
 
         count = state.get("_context_summary_count", 0) + 1
         state["_context_summary_count"] = count
 
         logger.info(
-            "Context summarized (#%d): %d msgs → %d "
-            "(%d prefix + 1 summary + %d recent)",
+            "Context summarized (#%d): %d msgs → %d",
             count,
             len(messages),
-            prefix_count + 1 + keep_recent,
-            prefix_count,
-            keep_recent,
+            len(compressed),
         )
 
-        return prefix + [summary_msg] + recent
+        return compressed
 
     async def get_prompt_messages(self, state):
         """Override to compress context when nearing max_seq_len.
@@ -231,6 +288,29 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
 
         return all_messages
 
+    # ------------------------------------------------------------------
+    # Buyer conversation orchestration
+    # ------------------------------------------------------------------
+
+    async def _get_buyer_conversation_reply(
+        self,
+        buyer_policy: LLMBuyerPolicy | RuleBasedBuyerPolicy,
+        lead: Any,
+        agent_text: str,
+        messages: list | None,
+    ) -> str | None:
+        """Get a buyer conversation reply with error isolation."""
+        try:
+            result = buyer_policy.generate_response(
+                lead=lead, agent_message=agent_text, messages=messages,
+            )
+            if inspect.isawaitable(result):
+                return await result
+            return result
+        except Exception as exc:
+            logger.warning("Buyer conversation LLM failed: %s", exc)
+            return "I'm listening."
+
     async def env_response(self, messages, state, **kwargs):
         last_msg = messages[-1] if messages else {}
         has_tools = "tool_calls" in last_msg and last_msg.get("tool_calls") is not None
@@ -246,7 +326,8 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         if has_tools:
             tool_results = await super().env_response(messages, state, **kwargs)
 
-            runtime = state.get("runtime")
+            runtime: SalesEpisodeRuntime | None = state.get("runtime")
+            buyer_policy = state.get("buyer_policy")
             if runtime:
                 # Inject buyer spoken response after propose_offer decisions
                 if runtime._pending_buyer_speech:
@@ -255,37 +336,41 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
                     tool_results = list(tool_results) + [
                         {"role": "user", "content": speech}
                     ]
-                # Also generate buyer conversation response when agent sent
-                # text alongside tool calls during an active call (e.g. the
-                # seller greets the buyer while simultaneously quoting).
-                elif runtime.active_call and not runtime.done:
+                # Generate buyer conversation response when agent sent
+                # text alongside tool calls during an active call
+                elif runtime.active_call and not runtime.done and buyer_policy:
                     agent_text = str(last_msg.get("content", "")).strip()
                     if agent_text:
-                        buyer_reply = await runtime.conversation_turn(
-                            agent_text=agent_text, messages=messages
-                        )
-                        if buyer_reply:
-                            lead = runtime.leads.get(runtime.active_call.lead_id)
-                            name = lead.full_name if lead else "Buyer"
-                            tool_results = list(tool_results) + [
-                                {"role": "user", "content": f"[{name} (buyer)]: {buyer_reply}"}
-                            ]
+                        lead = runtime.advance_conversation(agent_text)
+                        if lead:
+                            buyer_reply = await self._get_buyer_conversation_reply(
+                                buyer_policy, lead, agent_text, messages,
+                            )
+                            if buyer_reply:
+                                tool_results = list(tool_results) + [
+                                    {"role": "user", "content": f"[{lead.full_name} (buyer)]: {buyer_reply}"}
+                                ]
 
             return tool_results
 
         # Plain text from agent — inject buyer response if in a call
         runtime = state.get("runtime")
-        if runtime and not runtime.done and runtime.active_call:
+        buyer_policy = state.get("buyer_policy")
+        if runtime and not runtime.done and runtime.active_call and buyer_policy:
             agent_text = str(last_msg.get("content", "")).strip()
             if agent_text:
-                buyer_reply = await runtime.conversation_turn(
-                    agent_text=agent_text, messages=messages
-                )
-                if buyer_reply:
-                    lead = runtime.leads.get(runtime.active_call.lead_id)
-                    name = lead.full_name if lead else "Buyer"
-                    return [{"role": "user", "content": f"[{name} (buyer)]: {buyer_reply}"}]
+                lead = runtime.advance_conversation(agent_text)
+                if lead:
+                    buyer_reply = await self._get_buyer_conversation_reply(
+                        buyer_policy, lead, agent_text, messages,
+                    )
+                    if buyer_reply:
+                        return [{"role": "user", "content": f"[{lead.full_name} (buyer)]: {buyer_reply}"}]
         return []
+
+    # ------------------------------------------------------------------
+    # Stop conditions and episode lifecycle
+    # ------------------------------------------------------------------
 
     @vf.stop
     async def no_tools_called(self, state):
@@ -477,4 +562,8 @@ def load_environment(
         context_rewrite_threshold=context_rewrite_threshold,
         context_keep_recent=context_keep_recent,
         context_max_seq_len=context_max_seq_len,
+        buyer_policy_type=buyer_policy,
+        buyer_model=buyer_model,
+        buyer_base_url=buyer_base_url,
+        buyer_api_key_var=buyer_api_key_var,
     )
