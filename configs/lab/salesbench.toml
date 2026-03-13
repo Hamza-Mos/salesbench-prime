@@ -1,10 +1,10 @@
-# v29: 5 leads — curriculum step from v28's 4-lead near-saturation (step ~365, peak 1.528, 95.5% ceiling)
-# v28 best: k87pq6aqem5nqc2hucgkjy5n (4 leads, clean avg ~1.51, conv 94.5%, budget 94.5%)
-# Curriculum: 2→3→4→5 leads. Resuming from v28 checkpoint.
+# v30: 6 leads — curriculum step from v29's 5-lead saturation (step ~580, clean avg 1.57, 98% ceiling)
+# v29 best: gvhkrdz2odflom5py4h58je2 (5 leads, peak 1.580, saturated at 1.57)
+# Curriculum: 2→3→4→5→6 leads. Resuming from v29 checkpoint.
 
-checkpoint_id = "if77ga2x9csotc8y4117s7jg"
+checkpoint_id = "jf46xjn7f6qrt8l1w11twygs"
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
-max_steps = 800
+max_steps = 1100
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
@@ -19,7 +19,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 5, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "train", num_examples = 2048, num_leads = 6, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
@@ -31,5 +31,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v29"
+name = "qwen3-30b-salesbench-v30"
 entity = "hamza-mos-university-of-waterloo"
