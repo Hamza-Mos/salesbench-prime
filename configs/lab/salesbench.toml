@@ -1,8 +1,8 @@
-# v31: 8 leads — scaling from v30's 6-lead training (step 610, clean avg 1.47, 92% ceiling)
-# v30 best: vdbsi8xocjn58kwzchm69ict (6 leads, peak 1.475, clean avg 1.45)
-# Curriculum: 2→3→4→5→6→8 leads. Resuming from v30 checkpoint.
+# v31: 8 leads — continuing from v31a checkpoint (step 650, clean avg 1.12, 70% ceiling)
+# v31a best: qrholap10uc2aktxjtva4kr7 (8 leads, peak 1.132, 45 steps)
+# Curriculum: 2→3→4→5→6→8 leads. Resuming from v31a checkpoint.
 
-checkpoint_id = "j6v4vkc9mwlmynkk865jzu4z"
+checkpoint_id = "z7nr2g19711gsg2zisb2h772"
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
 max_steps = 910
 batch_size = 128
