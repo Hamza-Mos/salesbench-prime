@@ -405,6 +405,11 @@ class SalesEpisodeRuntime:
             raise RuntimeActionError("coverage_amount must be > 0")
         if not next_step:
             raise RuntimeActionError("next_step cannot be empty")
+        if self.active_call.lead_id not in self._quoted_leads:
+            raise RuntimeActionError(
+                "must quote a plan for this lead before proposing — "
+                "use products_quote_plan first"
+            )
         plan = self._parse_plan_type(plan_type)
         offer = Offer(
             plan_type=plan,
