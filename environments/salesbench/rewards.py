@@ -262,8 +262,8 @@ _REWARD_WEIGHTS = [
     -0.30,  # penalty_dnc_violations     — hard compliance (safety rail)
     -0.05,  # penalty_invalid_actions    — keep low; unavoidable schema errors add noise
     0.10,   # reward_episode_completion  — shaped: pipeline_exhausted=1.0, time=0.5, invalid=0.0
-    0.30,   # reward_budget_utilization  — reduced: redirect weight to quote coverage
-    0.10,   # reward_quote_coverage      — prevents degenerate skip-quoting strategy
+    0.20,   # reward_budget_utilization  — reduced: saturated at 99%+, redirect to quote coverage
+    0.20,   # reward_quote_coverage      — strong signal to prevent skip-quoting degeneracy
 ]
 
 _ERROR_TYPE_MAP = {
