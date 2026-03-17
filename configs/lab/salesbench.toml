@@ -1,10 +1,10 @@
-# v32: 12 leads — scaling from v31's 8-lead training (step 795, clean avg 1.36, 86% ceiling)
-# v31 best: zejyompwevhcpkal7ulhre48 (8 leads, peak 1.374, 155 steps)
-# Curriculum: 2→3→4→5→6→8→12 leads. Resuming from v31 checkpoint.
+# v33: 20 leads — scaling from v32's 12-lead near-mastery (step 800, clean avg 1.51, 95% ceiling)
+# v32 best: pfth19p99h6yx3x8kjjorhvm (12 leads, peak 1.535, 8 steps, mastered immediately)
+# Curriculum: 2→3→4→5→6→8→12→20 leads. Resuming from v32 checkpoint.
 
-checkpoint_id = "rxxuusyu1y99k8v3dral42bb"
+checkpoint_id = "vkdhm3ds8g2zpyffp9gotpjc"
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
-max_steps = 1095
+max_steps = 1100
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
@@ -19,7 +19,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 12, total_hours = 2, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "train", num_examples = 2048, num_leads = 20, total_hours = 3, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
@@ -31,5 +31,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v32"
+name = "qwen3-30b-salesbench-v33"
 entity = "hamza-mos-university-of-waterloo"
