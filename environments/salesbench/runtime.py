@@ -71,6 +71,7 @@ class SalesEpisodeRuntime:
         self._call_counter = 0
         self._callback_counter = 0
         self._contacted_leads: set[str] = set()
+        self._quoted_leads: set[str] = set()
         self.event_log: list[str] = []
         self._pending_buyer_speech: str | None = None
 
@@ -341,6 +342,7 @@ class SalesEpisodeRuntime:
         except ValueError as exc:
             raise RuntimeActionError(str(exc)) from exc
         self._advance(self.config.tool_costs.quote_minutes, "quote_plan")
+        self._quoted_leads.add(lead_id)
 
         affordability_ratio = quote["monthly_premium"] / max(lead.budget_monthly, 1.0)
         return {
@@ -414,6 +416,8 @@ class SalesEpisodeRuntime:
 
         self.active_call.offers.append(offer)
         self.stats.offers_proposed += 1
+        if self.active_call.lead_id in self._quoted_leads:
+            self.stats.quoted_proposals += 1
         self._advance(self.config.tool_costs.propose_offer_minutes, "propose_offer")
 
         # Time may have expired during _advance, which finalizes the active

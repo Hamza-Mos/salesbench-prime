@@ -251,6 +251,7 @@ class EpisodeStats:
     revenue_mrr: float = 0.0
     offers_proposed: int = 0
     offers_accepted: int = 0
+    quoted_proposals: int = 0
     leads_contacted: int = 0
     callbacks_scheduled: int = 0
     callbacks_completed: int = 0
@@ -268,6 +269,7 @@ class EpisodeStats:
             "revenue_mrr": round(self.revenue_mrr, 2),
             "offers_proposed": self.offers_proposed,
             "offers_accepted": self.offers_accepted,
+            "quoted_proposals": self.quoted_proposals,
             "leads_contacted": self.leads_contacted,
             "callbacks_scheduled": self.callbacks_scheduled,
             "callbacks_completed": self.callbacks_completed,

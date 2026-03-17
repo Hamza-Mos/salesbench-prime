@@ -1,6 +1,7 @@
-# v33: 20 leads — scaling from v32's 12-lead near-mastery (step 800, clean avg 1.51, 95% ceiling)
-# v32 best: pfth19p99h6yx3x8kjjorhvm (12 leads, peak 1.535, 8 steps, mastered immediately)
-# Curriculum: 2→3→4→5→6→8→12→20 leads. Resuming from v32 checkpoint.
+# v34: 15 leads + quote_coverage reward — prevents degenerate skip-quoting strategy
+# v33 exposed degeneracy: model skipped CRM search + quoting at 20 leads (reward hacking)
+# Fix: add reward_quote_coverage (w=0.10), rebalance conv (0.15→0.10) + budutil (0.35→0.30)
+# Curriculum: 2→3→4→5→6→8→12→15 leads. Resuming from v32 checkpoint (pre-degeneracy).
 
 checkpoint_id = "vkdhm3ds8g2zpyffp9gotpjc"
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
@@ -19,7 +20,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 20, total_hours = 3, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "train", num_examples = 2048, num_leads = 15, total_hours = 3, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
@@ -31,5 +32,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v33"
+name = "qwen3-30b-salesbench-v34"
 entity = "hamza-mos-university-of-waterloo"

@@ -103,6 +103,22 @@ async def reward_budget_utilization(state: dict[str, Any]) -> float:
     return total_ratio / max(1, runtime.config.num_leads)
 
 
+async def reward_quote_coverage(state: dict[str, Any]) -> float:
+    """Reward for quoting plans before proposing offers.
+
+    Measures the fraction of proposals that were preceded by at least one
+    ``quote_plan`` call for the same lead.  Prevents the degenerate strategy
+    of blindly proposing memorised prices without researching the lead.
+    """
+
+    runtime = _get_runtime(state)
+    if runtime is None:
+        return 0.0
+    if runtime.stats.offers_proposed == 0:
+        return 0.0
+    return runtime.stats.quoted_proposals / runtime.stats.offers_proposed
+
+
 # ---------------------------------------------------------------------------
 # Metric functions (data-driven generation)
 # ---------------------------------------------------------------------------
@@ -134,6 +150,11 @@ _METRIC_SPECS: list[tuple[str, Callable[[SalesEpisodeRuntime], float]]] = [
         rt.stats.revenue_mrr / rt.max_achievable_mrr if rt.max_achievable_mrr > 0 else 0.0
     )),
     ("metric_budget_utilization_raw", lambda rt: _budget_util_raw(rt)),
+    ("metric_quoted_proposals", lambda rt: float(rt.stats.quoted_proposals)),
+    ("metric_quote_coverage_raw", lambda rt: (
+        rt.stats.quoted_proposals / rt.stats.offers_proposed
+        if rt.stats.offers_proposed > 0 else 0.0
+    )),
 ]
 
 
@@ -232,15 +253,17 @@ _REWARD_FUNCS = [
     penalty_invalid_actions,
     reward_episode_completion,
     reward_budget_utilization,
+    reward_quote_coverage,
 ]
 
 _REWARD_WEIGHTS = [
     1.00,   # reward_revenue_mrr        — primary objective: maximize normalized revenue
-    0.15,   # reward_conversion_rate     — raised: 3 leads harder, need conversion signal
+    0.10,   # reward_conversion_rate     — reduced: saturated at higher lead counts
     -0.30,  # penalty_dnc_violations     — hard compliance (safety rail)
     -0.05,  # penalty_invalid_actions    — keep low; unavoidable schema errors add noise
     0.10,   # reward_episode_completion  — shaped: pipeline_exhausted=1.0, time=0.5, invalid=0.0
-    0.35,   # reward_budget_utilization  — reduced: conversion matters more at higher difficulty
+    0.30,   # reward_budget_utilization  — reduced: redirect weight to quote coverage
+    0.10,   # reward_quote_coverage      — prevents degenerate skip-quoting strategy
 ]
 
 _ERROR_TYPE_MAP = {
