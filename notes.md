@@ -1,21 +1,44 @@
 # SalesBench Lab Notebook
 
-## 2026-03-17: v32 — Scale to 12 leads
+## 2026-03-17: v34c — Quote requirement + 15 leads (RUNNING)
 
-**Run**: `pfth19p99h6yx3x8kjjorhvm`
-**Config**: 12 leads, 2 hours, checkpoint from v31 (step 795), max_steps=1095 (300 steps)
-**Hypothesis**: v31 reached 86% ceiling at 8 leads in 155 steps. Aggressive scaling continues. total_hours=2 gives 10 min/lead. Expect curriculum transfer to start ~0.9+.
+**Run**: `zs5bpb9yt9fi1suaqivm2pfr`
+**Config**: 15 leads, 3 hours, v0.24.2 (quote required before propose), checkpoint from v32 (step 800)
+**Changes**:
+- Runtime: `propose_offer` requires prior `quote_plan` for the lead
+- Reward: added `reward_quote_coverage` (w=0.10), conv 0.15→0.10, budget_util stays 0.30
+- Ceiling unchanged at 1.60
 
-**Status**: Just launched. Monitoring.
+**Results so far (32 steps)**:
+- Reward: 0.43 → 0.94 (best), climbing steadily
+- Quote coverage: 0.09 → **1.00** — model fully learned to quote!
+- Conversions: 4.7/15 → 10.6/15 (71% on best step)
+- Invalid actions: ~11/episode (high but stable — mostly bad params)
+- Error rate: 40-85% every step, zero clean steps
+- Budget util: still ~99% when model converts
+
+**Key finding**: Reward signal alone (w=0.10 and w=0.20) didn't teach quoting — GRPO can't reinforce behaviors absent from rollouts. Hard env constraint was needed.
 
 ---
 
-## 2026-03-16-17: v31 — 8 leads (STOPPED at step ~805)
+## 2026-03-17: v33 — 20 leads (STOPPED, degenerate)
 
-**Runs**: `qrholap10uc2aktxjtva4kr7` (45 steps), `zejyompwevhcpkal7ulhre48` (155 steps)
-**Config**: 8 leads, 1 hour, checkpoint from v30 (step 610/650)
-**Result**: Peak **1.374** (85.9% ceiling) at step 795. Clean avg 1.36. Conv 6.95/8 (87%). Budget util 99.9%.
-**Key**: Curriculum transfer confirmed (started at 1.06). Error rate very high (51%) but model always recovers. Went from 1.06 → 1.37 in 155 steps. Seq_len ~7.5k.
+**Run**: `tg5h5av4oqvnjygtu771dum7`
+**Result**: Model skipped CRM search (0.69 vs 6.81) and quoting (0.0 vs 1.3) entirely. Reward hacking — blindly proposing memorized prices. Peak 1.481 with 27% errors. Conv 19.2/20 (96%) but terrible sales process. 100% error steps (zero clean) in 34 steps.
+
+---
+
+## 2026-03-17: v32 — 12 leads (STOPPED, instant mastery)
+
+**Run**: `pfth19p99h6yx3x8kjjorhvm`
+**Result**: Peak **1.535** (96% ceiling) in just 8 steps! Conv 11.74/12 (98%). Instant curriculum transfer. Stopped to scale.
+
+---
+
+## 2026-03-16-17: v31 — 8 leads (STOPPED)
+
+**Runs**: `qrholap10uc2aktxjtva4kr7` + `zejyompwevhcpkal7ulhre48`
+**Result**: Peak **1.374** (86% ceiling) in 155 steps. Conv 6.95/8 (87%). Clean avg 1.36.
 
 ---
 
@@ -24,10 +47,10 @@
 | Version | Leads | Peak | Ceiling% | Steps | Key Result |
 |---------|-------|------|----------|-------|------------|
 | v25 | 2 | 1.451 | 91% | 200 | Saturated |
-| v26 | 3 | 1.354 | 85% | 200 | Plateaued step 130 |
-| v27 | 3 | 1.400 | 88% | 111 | Clean avg ~1.38 |
-| v28 | 4 | 1.528 | 95.5% | 370 | Mastered 4 leads |
-| v29 | 5 | 1.580 | 98% | 210 | Mastered 5 leads |
-| v30 | 6 | 1.475 | 92% | 40 | Fast learning, scaled quickly |
-| v31 | 8 | 1.374 | 86% | 155 | 51% error rate, still learned |
-| v32 | 12 | - | - | - | RUNNING |
+| v28 | 4 | 1.528 | 95.5% | 370 | Mastered |
+| v29 | 5 | 1.580 | 98% | 210 | Mastered |
+| v30 | 6 | 1.475 | 92% | 40 | Fast |
+| v31 | 8 | 1.374 | 86% | 155 | 51% error rate |
+| v32 | 12 | 1.535 | 96% | 8 | Instant mastery |
+| v33 | 20 | 1.481 | 93% | 34 | DEGENERATE — no quoting |
+| v34c | 15 | 0.936 | 59% | 32 | Learning with quote req |
