@@ -1,12 +1,13 @@
-# v35: 12 leads + quote requirement — restart from clean v31 weights
-# v34c collapsed after step 918 (60 steps of zero conversions). Recovery unstable.
-# Restart from v31 step 795 (clean 8-lead weights, proper tool usage) with v0.24.2 env.
-# 12 leads is the sweet spot — model mastered it in v32 but without quoting.
-# With quote requirement, model must learn quote→propose at 12 leads.
+# v36: drop reward floor to break GRPO degenerate-collapse trap.
+# v35 collapsed at step 829 — model locked onto qc(0.10)+completion(0.05)=0.15 floor
+# and stopped exploring conversions. Removed reward_quote_coverage (env constraint
+# already enforces it) and scaled reward_episode_completion 0.10→0.02.
+# New ceiling: 1.42. New floor (no conv): ~0.01 (15× reduction).
+# Same v31 step-795 checkpoint, same 12 leads — pure reward-shape change.
 
 checkpoint_id = "rxxuusyu1y99k8v3dral42bb"
 model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
-max_steps = 1095
+max_steps = 1500
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
@@ -33,5 +34,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v35"
+name = "qwen3-30b-salesbench-v36"
 entity = "hamza-mos-university-of-waterloo"

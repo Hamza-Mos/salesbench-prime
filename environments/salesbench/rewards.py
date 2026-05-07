@@ -103,22 +103,6 @@ async def reward_budget_utilization(state: dict[str, Any]) -> float:
     return total_ratio / max(1, runtime.config.num_leads)
 
 
-async def reward_quote_coverage(state: dict[str, Any]) -> float:
-    """Reward for quoting plans before proposing offers.
-
-    Measures the fraction of proposals that were preceded by at least one
-    ``quote_plan`` call for the same lead.  Prevents the degenerate strategy
-    of blindly proposing memorised prices without researching the lead.
-    """
-
-    runtime = _get_runtime(state)
-    if runtime is None:
-        return 0.0
-    if runtime.stats.offers_proposed == 0:
-        return 0.0
-    return runtime.stats.quoted_proposals / runtime.stats.offers_proposed
-
-
 # ---------------------------------------------------------------------------
 # Metric functions (data-driven generation)
 # ---------------------------------------------------------------------------
@@ -253,17 +237,19 @@ _REWARD_FUNCS = [
     penalty_invalid_actions,
     reward_episode_completion,
     reward_budget_utilization,
-    reward_quote_coverage,
 ]
 
+# v36: floor reduced to break GRPO degenerate-collapse trap. v35 locked onto
+# qc(0.10) + completion(0.05) = 0.15 floor and stopped exploring conversions.
+# quote_coverage removed (env constraint enforces it; was redundant). completion
+# scaled down so time_budget_exhausted contributes ≤0.01. Ceiling: 1.60 → 1.42.
 _REWARD_WEIGHTS = [
-    1.00,   # reward_revenue_mrr        — primary objective: maximize normalized revenue
+    1.00,   # reward_revenue_mrr         — primary objective: maximize normalized revenue
     0.10,   # reward_conversion_rate     — reduced: saturated at higher lead counts
     -0.30,  # penalty_dnc_violations     — hard compliance (safety rail)
     -0.05,  # penalty_invalid_actions    — keep low; unavoidable schema errors add noise
-    0.10,   # reward_episode_completion  — shaped: pipeline_exhausted=1.0, time=0.5, invalid=0.0
-    0.30,   # reward_budget_utilization  — restored: env now requires quoting
-    0.10,   # reward_quote_coverage      — observability + bonus for proper workflow
+    0.02,   # reward_episode_completion  — tiny tie-breaker; not enough to be a floor
+    0.30,   # reward_budget_utilization  — premium capture
 ]
 
 _ERROR_TYPE_MAP = {

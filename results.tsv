@@ -5,4 +5,9 @@ v27	tgojv1pxq7t8tqk87y1aae0u	3	111	1.400	88%	94%	85.5%	86.1%	STOPPED	Plateaued ~
 v28	k87pq6aqem5nqc2hucgkjy5n	4	370	1.528	95.5%	94.5%	94.5%	89.8%	STOPPED	Mastered 4 leads. Curriculum transfer confirmed.
 v29	gvhkrdz2odflom5py4h58je2	5	580	1.580	98%	~97%	~95%	~93%	STOPPED	Mastered 5 leads. Saturated at 1.57.
 v30a	g6lbi3qlnh3sv3d1tcpw4mtz	6	0	-	-	-	-	-	FAILED	Env server timeout (cluster issue)
-v30b	vdbsi8xocjn58kwzchm69ict	6	(running)	-	-	-	-	-	RUNNING	Retry of v30. 6 leads from v29 checkpoint.
+v30b	vdbsi8xocjn58kwzchm69ict	6	~40	1.475	92%	-	-	-	STOPPED	Retry of v30. Fast climb, stopped to scale.
+v31	qrholap10uc2aktxjtva4kr7+zejyompwevhcpkal7ulhre48	8	155	1.374	86%	87%	-	-	STOPPED	Peak at 1.374, 51% error rate. Clean avg 1.36.
+v32	pfth19p99h6yx3x8kjjorhvm	12	8	1.535	96%	98%	-	-	STOPPED	Instant mastery — but no quoting (degenerate).
+v33	tg5h5av4oqvnjygtu771dum7	20	34	1.481	93%	96%	-	-	STOPPED	DEGENERATE: skipped CRM and quoting entirely.
+v34c	zs5bpb9yt9fi1suaqivm2pfr	15	~970	1.387	87%	-	-	-	STOPPED	Quote requirement env. Peak 1.387 step 918, then collapse.
+v35	t2odcytmh5975lxg62fzqroq	12	1095	1.002	63%	68%	-	-	COMPLETED	Peak step 816, collapsed step 829. 0 conv for last 268 steps. GRPO degenerate floor lock.
