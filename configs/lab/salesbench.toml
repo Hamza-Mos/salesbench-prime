@@ -1,13 +1,13 @@
-# v36: drop reward floor to break GRPO degenerate-collapse trap.
-# v35 collapsed at step 829 — model locked onto qc(0.10)+completion(0.05)=0.15 floor
-# and stopped exploring conversions. Removed reward_quote_coverage (env constraint
-# already enforces it) and scaled reward_episode_completion 0.10→0.02.
-# New ceiling: 1.42. New floor (no conv): ~0.01 (15× reduction).
-# Same v31 step-795 checkpoint, same 12 leads — pure reward-shape change.
+# v36: fresh start on Qwen3.5-35B-A3B + floor-reduced reward shape.
+# Forced by platform: Qwen3-30B-A3B-Instruct-2507 was RETIRED (May 2026).
+# Qwen3.5-35B-A3B is the direct successor — same MoE arch, 3B active.
+# v31 LoRA checkpoint is dead (trained on old base) → train from scratch.
+# Curriculum reset to 2 leads (proven sweet spot for fresh GRPO; rule #36).
+# Reward fix carried over: removed reward_quote_coverage, completion 0.10→0.02.
+# Ceiling 1.42, floor ~0.01 (no conv) — eliminates v35-style floor collapse.
 
-checkpoint_id = "rxxuusyu1y99k8v3dral42bb"
-model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
-max_steps = 1500
+model = "Qwen/Qwen3.5-35B-A3B"
+max_steps = 500
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
@@ -22,7 +22,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 12, total_hours = 2, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "train", num_examples = 2048, num_leads = 2, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
