@@ -11,3 +11,4 @@ v32	pfth19p99h6yx3x8kjjorhvm	12	8	1.535	96%	98%	-	-	STOPPED	Instant mastery — 
 v33	tg5h5av4oqvnjygtu771dum7	20	34	1.481	93%	96%	-	-	STOPPED	DEGENERATE: skipped CRM and quoting entirely.
 v34c	zs5bpb9yt9fi1suaqivm2pfr	15	~970	1.387	87%	-	-	-	STOPPED	Quote requirement env. Peak 1.387 step 918, then collapse.
 v35	t2odcytmh5975lxg62fzqroq	12	1095	1.002	63%	68%	-	-	COMPLETED	Peak step 816, collapsed step 829. 0 conv for last 268 steps. GRPO degenerate floor lock.
+v36	geh9smdj2wxkzpjn2pro3dtk	2	(running)	-	-	-	-	-	RUNNING	Fresh start on Qwen3.5-35B-A3B (old model retired). v31 ckpt dead. Floor-reduced reward (ceiling 1.42).

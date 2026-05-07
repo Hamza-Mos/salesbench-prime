@@ -1,18 +1,25 @@
 # SalesBench Lab Notebook
 
-## 2026-05-07: v36 plan — Drop floor reward to break GRPO collapse (DRAFTED)
+## 2026-05-07: v36 — Floor-reduced reward + new base model (RUNNING)
 
-**Diagnosis from v35**: model locked onto qc(0.10) + completion(0.05) = 0.15 floor reward and gave up exploring conversions. 15.4 offers/ep, 14.4 rejected, 0 accepted — pure quote→propose→fail loop.
+**Run**: `geh9smdj2wxkzpjn2pro3dtk`
+**Model**: `Qwen/Qwen3.5-35B-A3B` (was Qwen3-30B-A3B-Instruct-2507 — RETIRED by Prime)
+**Config**: 2 leads, 1 hour, env v0.24.3, **no checkpoint** (v31 LoRA dead — wrong base), 500 max_steps
+**Reward changes** (ceiling 1.60 → 1.42):
+- Removed `reward_quote_coverage` entirely (env constraint already enforces quote-before-propose; reward was a redundant floor)
+- `reward_episode_completion` weight 0.10 → 0.02 (tie-breaker, not a floor)
+- Floor when no conversions: 0.15 → ~0.01 (**15× reduction**)
 
-**Lever (single rebalance)**:
-- Remove `reward_quote_coverage` entirely — env constraint already enforces quote-before-propose, so reward was 100% redundant and a free 0.10 floor
-- `reward_episode_completion` weight 0.10 → 0.02 — keeps tie-breaker, removes 0.05 floor from time_budget_exhausted
+**Forced events**:
+- Old base model retired during the long pause between runs. Available now: Qwen3.5 family (0.8B–397B), Qwen3.6-35B-A3B, Llama 3.2, Nemotron, gpt-oss. Closest successor is Qwen3.5-35B-A3B (same MoE arch, 3B active).
+- v31 LoRA checkpoint is dead — different base, weights won't load. Must train from scratch.
+- Curriculum reset 12 → 2 leads (proven fresh-GRPO sweet spot, rule #36).
 
-**New ceiling**: 1.42 (was 1.60). New floor (no conversions): ~0.01 (was 0.15) — **15× reduction**.
+**Hypothesis**: with the floor gone, GRPO has no degenerate local optimum to lock onto. Conversion-seeking becomes the only path to >0.01 reward. New base may need 50–100 steps to match old model's baseline; 2 leads should be quickly mastered if reward shape is healthy.
 
-**Plan**: bump env to v0.24.3, restart from v31 checkpoint (step 795, clean 8-lead weights), 12 leads, 2 hours. Same proven config (lr=1e-5, temp=1.0, batch=128, oversampling=2.5, max_async=1).
+**Watch for**: (1) does it climb past 0.5 in <50 steps? (2) does reward variance stay healthy (bimodal-ish)? (3) any error_type spikes from the new model?
 
-**Hypothesis**: with the floor gone, GRPO has no degenerate local optimum. Conversion-seeking becomes the only path to >0.01 reward.
+**Curriculum plan (if v36 succeeds)**: 2 → 3 → 4 → 6 → 8 → 12 leads, scale only after >95% of ceiling for 50+ steps.
 
 ---
 
