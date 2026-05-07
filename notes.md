@@ -1,6 +1,22 @@
 # SalesBench Lab Notebook
 
-## 2026-05-07: v36 — Floor-reduced reward + new base model (RUNNING)
+## 2026-05-07: v36 — STOPPED at step 0, wallet exhausted
+
+**Run**: `geh9smdj2wxkzpjn2pro3dtk` — STOPPED 18:19 UTC, ~31 min after launch
+**Reason**: `Stopped automatically: wallet balance exhausted (available=$-8.30)`. Hard external block.
+
+**One data point before stop**:
+- Step 0: 1809.99s (30.2 min), reward = -0.0005, seq_len 5116 tokens/sample
+- 14/128 rollouts filtered (4 gibberish, 10 zero_advantage) — 89% clean, expected on fresh untrained 35B
+- No conversions, no real signal yet — typical for step 0 from scratch on a new base
+
+**Action required**: top up Prime wallet, then `prime rl run configs/lab/salesbench.toml` — config and env are already in place (v0.24.3 pushed, salesbench.toml at v36 settings, no checkpoint).
+
+**Cost note**: at 30 min/step for 35B + 2 leads, 500 steps ≈ 250 GPU-hours = ~10 days wall-clock. Monitor wallet proactively before any large-scope curriculum step.
+
+---
+
+## 2026-05-07: v36 — Floor-reduced reward + new base model (LAUNCHED then STOPPED)
 
 **Run**: `geh9smdj2wxkzpjn2pro3dtk`
 **Model**: `Qwen/Qwen3.5-35B-A3B` (was Qwen3-30B-A3B-Instruct-2507 — RETIRED by Prime)
