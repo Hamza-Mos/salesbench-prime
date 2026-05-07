@@ -1,5 +1,30 @@
 # SalesBench Lab Notebook
 
+## 2026-05-07: v37 plan — Drop to Qwen3.5-4B for cheap reward-shape validation (DRAFTED)
+
+**Strategy shift**: v36 step 0 cost $73.50 on Qwen3.5-35B-A3B. Extrapolating to full curriculum = $1.5M-3M envelope. Validate v36 reward fix on a 4B base first (~5-10× cheaper) before paying 35B economics.
+
+**Config (configs/lab/salesbench.toml)**:
+- `model = "Qwen/Qwen3.5-4B"`
+- `max_steps = 200` (50-100 productive steps is enough to validate reward signal)
+- `num_leads = 2, total_hours = 1` (proven fresh-GRPO sweet spot)
+- No checkpoint (4B is a different base from 35B; no transfer possible)
+- Reward fix carries over: ceiling 1.42, floor ~0.01
+
+**Cost target**: ~$5-15 for the full 200-step run vs ~$15k on 35B. If 4B can stably reach 1.0+ reward at 2 leads, the v36 reward shape is proven safe and we scale up — first leads on 4B (cheap), then base+leads together.
+
+**Tiered scaling plan** (recorded in program.md):
+- Phase A (current): Qwen3.5-4B for 2→6 leads
+- Phase B: Qwen3.5-9B for 6→20 leads
+- Phase C: Qwen3.5-35B-A3B for 20→100 leads
+- Each phase fresh-start (checkpoints don't transfer across base models)
+
+**Hypothesis**: if 4B can't even climb at 2 leads with the new reward shape, the issue isn't capability — it's reward shape (cheap signal, fix and retry). If 4B climbs to 0.6+, scale curriculum on 4B until it caps, then upgrade base.
+
+**Awaiting**: Prime wallet top-up, then `prime rl run configs/lab/salesbench.toml`. Env v0.24.3 is already pushed.
+
+---
+
 ## 2026-05-07: v36 — STOPPED at step 0, wallet exhausted
 
 **Run**: `geh9smdj2wxkzpjn2pro3dtk` — STOPPED 18:19 UTC, ~31 min after launch

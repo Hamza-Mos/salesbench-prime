@@ -1,13 +1,15 @@
-# v36: fresh start on Qwen3.5-35B-A3B + floor-reduced reward shape.
-# Forced by platform: Qwen3-30B-A3B-Instruct-2507 was RETIRED (May 2026).
-# Qwen3.5-35B-A3B is the direct successor — same MoE arch, 3B active.
-# v31 LoRA checkpoint is dead (trained on old base) → train from scratch.
-# Curriculum reset to 2 leads (proven sweet spot for fresh GRPO; rule #36).
-# Reward fix carried over: removed reward_quote_coverage, completion 0.10→0.02.
-# Ceiling 1.42, floor ~0.01 (no conv) — eliminates v35-style floor collapse.
+# v37: drop to small base for cheap validation of v36 reward fix.
+# v36 step 0 on Qwen3.5-35B-A3B cost ~$73 — extrapolating to full curriculum
+# = $1.5M-3M envelope. Validate the reward shape on a 4B model first
+# (~5-10× cheaper) before committing to the expensive base.
+# Strategy: Qwen3.5-4B for 2→6 lead curriculum (cheap, prove reward shape
+# is healthy and tool discipline learns), then upgrade base to 9B at 6 leads
+# and 35B-A3B at 20+ leads — paying for capacity only when needed.
+# Reward fix unchanged from v36: no reward_quote_coverage, completion 0.10→0.02.
+# Ceiling 1.42, floor ~0.01 (no conv).
 
-model = "Qwen/Qwen3.5-35B-A3B"
-max_steps = 500
+model = "Qwen/Qwen3.5-4B"
+max_steps = 200
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
@@ -34,5 +36,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3-30b-salesbench-v36"
+name = "qwen3.5-4b-salesbench-v37"
 entity = "hamza-mos-university-of-waterloo"
