@@ -14,6 +14,37 @@
 
 ---
 
+## 2026-05-09: v40 — escalate to Qwen3.5-4B with working buyer (real first test)
+
+**Status**: drafted, about to launch.
+**Change vs v39**: ONE LEVER — `model = "Qwen/Qwen3.5-4B"` (was 0.8B). Same v36 reward shape, same 2 leads, same env, working buyer LLM.
+**Why now**: v39 demonstrated that 0.8B legitimately can't scale conversion fast enough to overcome the invalid_action penalty even when the buyer responds. v38 was supposed to test 4B but had the broken buyer. v40 is the first clean 4B + working-buyer test.
+**Hypothesis**: 4B's stronger workflow execution (v38 step 0 showed propose=3.83/ep vs 0.8B's 0.45) gives it ~10× more shots at conversion per episode. If even 5-10% of those convert, the resulting reward signal should easily clear the invalid_action penalty floor and let GRPO climb.
+**Watch for**:
+- step 0: buyer_llm_call_count > 0 (mandatory check), propose ≥ 2/ep, ANY conversions
+- steps 10-30: does conv/ep climb? Or does it hover at 0 like 0.8B did?
+- if conv hits 0.05+/ep by step 30: ride it; if still flat at 0 by step 50: reward shape itself may need a rethink (penalty too dominant)
+
+---
+
+## 2026-05-09: v39 — Qwen3.5-0.8B with working buyer = real capability ceiling
+
+**Run**: `k5e8gdxdqa8qg4weh6j3svw7` — STOPPED at step 26 after collapse.
+**Cost**: ~$5-15 (27 steps on 0.8B at ~$0.20/step rough).
+
+**Mandatory check passed**: `metric_buyer_llm_call_count = 1.68/ep` at step 0 — buyer is firing. Latency healthy (0.7s avg). 0 timeouts. The infra fix worked.
+
+**Trajectory**:
+- Steps 0-8: model engaging — propose 0.1-0.45/ep, conv 0.01-0.02/ep, num_turns 21-29, buyer 0.9-2.7 calls/ep
+- Steps 9-15: gradual decline — propose dropping to 0.06, conv to 0, turns dropping to 9
+- Steps 16-26: full do-nothing collapse — propose=0, conv=0, contact=0, num_turns=1-2, even buyer_call_count=0
+
+**Diagnosis (now real, not infra-confounded)**: 0.8B + v36 reward shape on this env legitimately hits a degenerate equilibrium. The conv-reward signal at ~1-2% of episodes is too sparse to be a stable gradient — by the time GRPO would reinforce a conversion path, the invalid_action penalty has already driven the model to "no action."
+
+**Confirms**: original v37 lesson #24 about capability ceilings WAS partially right — it just needed the buyer-bug confounder cleared first. The cheapest tier (0.8B) is genuinely insufficient for this env at 2 leads under the v36 reward shape. Eli's "stay on smallest base, scale leads" strategy needs to start one tier up for this env.
+
+---
+
 ## 2026-05-09: v39 — return to Qwen3.5-0.8B with working buyer LLM
 
 **Status**: drafted, about to launch.

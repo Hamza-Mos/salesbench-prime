@@ -1,16 +1,16 @@
-# v39: return to Qwen3.5-0.8B after fixing the actual root cause of v37/v38 failures.
-# v37 (0.8B) and v38 (4B) both had the OpenAI key 401-ing silently on every
-# buyer LLM call → deterministic REJECT for every offer → no path to conversion
-# regardless of base size. The v37 "0.8B capability ceiling" diagnosis was
-# wrong; the real cause was a broken OPENAI_API_KEY. Fixed in secrets.env on
-# 2026-05-09 — gpt-5-mini now responds with sensible JSON (verified locally).
-# v39 returns to the Eli-mtg strategy: smallest base, scale leads via
-# curriculum. With a real buyer in the loop, validate whether 0.8B + the v36
-# reward shape can actually find conversions and learn at 2 leads.
+# v40: escalate base 0.8B → 4B after v39 confirmed real 0.8B capability ceiling.
+# v39 (run k5e8gdxdqa8qg4weh6j3svw7) ran 27 steps with the FIXED buyer LLM and
+# clearly collapsed: steps 0-8 engaged (propose 0.2/ep, conv 0.01-0.02/ep,
+# turns 20-29), steps 16-26 full do-nothing (propose=0, conv=0, turns=1-2).
+# The conv-reward gradient at ~1-2% of episodes was too sparse to override
+# the invalid_action penalty before GRPO converged on "do nothing."
+# v40 = same v36 reward shape, same 2 leads, ONE LEVER changed: model 0.8B → 4B.
+# v38 was supposed to test this but had the broken-buyer confounder; v40 is the
+# real first test of 4B with a working buyer. Buyer LLM verified working
+# 2026-05-09 — gpt-5-mini returns sensible JSON.
 # CRITICAL post-launch check: metric_buyer_llm_call_count must be > 0 by step 0.
-# If it's still 0, buyer is silently broken again — stop run immediately.
 
-model = "Qwen/Qwen3.5-0.8B"
+model = "Qwen/Qwen3.5-4B"
 max_steps = 200
 batch_size = 128
 rollouts_per_example = 32
@@ -38,5 +38,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3.5-0.8b-salesbench-v39"
+name = "qwen3.5-4b-salesbench-v40"
 entity = "hamza-mos-university-of-waterloo"
