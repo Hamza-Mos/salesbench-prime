@@ -13,4 +13,4 @@ v34c	zs5bpb9yt9fi1suaqivm2pfr	15	~970	1.387	87%	-	-	-	STOPPED	Quote requirement 
 v35	t2odcytmh5975lxg62fzqroq	12	1095	1.002	63%	68%	-	-	COMPLETED	Peak step 816, collapsed step 829. 0 conv for last 268 steps. GRPO degenerate floor lock.
 v36	geh9smdj2wxkzpjn2pro3dtk	2	0	-0.0005	0%	-	-	-	STOPPED	Wallet exhausted ($-8.30) after step 0. Step took 1810s (30 min) on 35B. 14/128 rollouts filtered. Cost: $73.50.
 v37	r90m00fyzu2o38wksjs24co4	2	35	0.0001	0%	0%	-	-	STOPPED	Qwen3.5-0.8B do-nothing collapse: 0 start_call/quote/propose by step 14. RL minimized invalid_action penalty by ceasing all tool calls. Base lacks capability headroom for sparse conversion reward to override penalty. Capability-ceiling escalation trigger fired.
-v38	(pending)	2	(drafted)	-	-	-	-	-	DRAFTED	Bump base 0.8B → Qwen3.5-4B. Same v36 reward shape, same 2 leads. ONE LEVER changed.
+v38	z2pxmvmgdujq6upcgv63uta4	2	(launched)	-	-	-	-	-	RUNNING	Bump base 0.8B → Qwen3.5-4B after v37 collapse. Same v36 reward shape, same 2 leads. ONE LEVER changed.
