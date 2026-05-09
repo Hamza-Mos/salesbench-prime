@@ -1,14 +1,17 @@
-# v37: drop to the smallest base for cheapest possible validation of the v36 reward fix.
-# v36 step 0 on Qwen3.5-35B-A3B cost ~$73. Strategy revised 2026-05-08 (Eli mtg):
-# stay on the small base and scale leads via curriculum (2→3→4→…→20) rather than
-# escalating model size. Only escalate base if we hit a real capability ceiling.
-# Starting at 0.8B (cheapest model offered, ~12-17× cheaper per token than 35B-A3B)
-# to validate the recipe + reward fix at minimum cost. Bump to 4B/9B only if 0.8B
-# can't learn tool discipline at all.
-# Reward fix unchanged from v36: no reward_quote_coverage, completion 0.10→0.02.
-# Ceiling 1.42, floor ~0.01 (no conv).
+# v38: escalate base 0.8B → 4B after v37 do-nothing collapse.
+# v37 (Qwen3.5-0.8B, 2 leads, run r90m00fyzu2o38wksjs24co4) ran 35 steps then
+# stopped at user request. Step 0 baseline showed the model attempting actions
+# (0.32 start_call/ep, 0.41 propose_offer/ep). By step ~14 the model fully
+# collapsed: 0 start_call, 0 quote_plan, 0 propose_offer, 0 leads_contacted,
+# num_turns ≈ 1. RL learned that "no action" is the optimal policy because the
+# invalid_action penalty (-0.005/error) was the only gradient — 0.8B never
+# successfully converted, so conversion reward stayed at 0 and couldn't
+# override the penalty. Documented capability-ceiling escalation trigger.
+# v38 keeps the same v36 reward shape (no quote_coverage, completion=0.02) and
+# the same 2-lead curriculum. ONLY change: base model 0.8B → 4B.
+# Reward shape ceiling 1.42, floor ~0.01.
 
-model = "Qwen/Qwen3.5-0.8B"
+model = "Qwen/Qwen3.5-4B"
 max_steps = 200
 batch_size = 128
 rollouts_per_example = 32
@@ -36,5 +39,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3.5-0.8b-salesbench-v37"
+name = "qwen3.5-4b-salesbench-v38"
 entity = "hamza-mos-university-of-waterloo"

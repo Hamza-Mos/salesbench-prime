@@ -1,5 +1,35 @@
 # SalesBench Lab Notebook
 
+## 2026-05-09: v38 — escalate base to Qwen3.5-4B after v37 do-nothing collapse
+
+**Status**: drafted, about to launch.
+**Change vs v37**: ONE LEVER — `model = "Qwen/Qwen3.5-4B"` (was 0.8B). Everything else identical: 2 leads, 1h, no checkpoint, max_steps=200, env v0.24.3, same v36 reward shape (no quote_coverage, completion 0.02).
+**Hypothesis**: 4B has enough capability headroom to actually convert occasionally during exploration. Once conversion reward fires (even at low rate), it overrides the −0.005-per-invalid-action penalty and gives GRPO a positive gradient to climb. 0.8B never got there because conversion never fired (capability gap), so the only available gradient was "minimize errors" → degenerate "do nothing."
+**Watch for**: by step 30-50, are there any propose_offer attempts (>0.1/ep) and any non-zero conversions? If yes: capability hypothesis confirmed, ride 4B through curriculum. If still degenerate: the issue is reward shape (penalty too dominant), not capability — need to reduce penalty_invalid_actions weight before any further base escalation.
+
+---
+
+## 2026-05-09: v37 — DO-NOTHING COLLAPSE on Qwen3.5-0.8B
+
+**Run**: `r90m00fyzu2o38wksjs24co4` — STOPPED at step 35 (user-requested via loop after diagnosing collapse).
+**Reward trajectory**:
+- Step 0: −0.0271 (model attempting things: 0.32 start_call/ep, 0.41 propose_offer/ep, 0.12 quoted_proposals/ep)
+- Step 7-13: monotonic decline in tool usage; reward climbing toward 0
+- Step 14 onward: full collapse — 0 start_call, 0 quote_plan, 0 propose_offer, 0 leads_contacted, num_turns≈1
+- Reward stuck at noise floor ~−0.0002 ± 0.0002 for 22 consecutive steps
+
+**Mechanism (clear)**: with conversion reward at 0 (the 0.8B base never closed a deal), the only consistent gradient available to GRPO was the invalid_action penalty (`−0.05 × 0.1 × invalid_count = −0.005/error`). The cheapest way to zero that penalty is to call no tools at all. RL converged on it within ~14 steps.
+
+**Cost**: ~35 steps × ~$0.50–2/step on 0.8B ≈ ~$15–70 to learn this lesson cleanly. Vastly cheaper than learning it on 35B.
+
+**Lesson (new)**: A capability-ceiling base + a non-zero invalid-action penalty + a near-zero outcome-reward ceiling = **degenerate "do nothing" attractor**. The floor:ceiling ratio of the reward shape was correct (~0.7%), but ceiling that the *current model* can actually reach is what matters for GRPO, not the theoretical ceiling. If the model can't reliably trip the outcome reward, the penalty is the only signal and the model learns to minimize it by inaction.
+
+**Implication for tier escalation**: program.md's capability-ceiling rule is right — but the signal isn't "conv rate plateaus low," it's "tool-attempt rate goes to zero in <30 steps." That's faster and more obvious than waiting for plateau.
+
+**Strategy revision**: keep "scale leads on smallest viable base" as the guiding principle, but the smallest viable base for *this* env is at least 4B, not 0.8B. v38 tests that.
+
+---
+
 ## 2026-05-08: v37 LAUNCHED — Qwen3.5-0.8B + v36 reward fix
 
 **Run**: `r90m00fyzu2o38wksjs24co4` (launched 2026-05-08, dashboard: https://app.primeintellect.ai/dashboard/training/r90m00fyzu2o38wksjs24co4)
