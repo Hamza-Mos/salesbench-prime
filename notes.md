@@ -1,5 +1,28 @@
 # SalesBench Lab Notebook
 
+## 2026-05-09: v37 + v38 ROOT CAUSE — broken OpenAI key (RETRACTING capability-ceiling diagnosis)
+
+**Smoking gun**: `metric_buyer_llm_call_count = 0` across ALL steps of both v37 and v38. Buyer LLM was never invoked. Why? `OPENAI_API_KEY` in secrets.env returned `AuthenticationError 401: 'You do not have access to the organization tied to the API key.'` Every `LLMBuyerPolicy._sync_evaluate_offer` call raised → `RuntimeActionError` → caught in `tools.py:192-194` → deterministic REJECT fallback. The `call_count` increment is *only* on the success path (policy.py:480), so the auth failures were silent in metrics: 0 calls, 0 timeouts, 0 latency, 0 errors visible.
+
+**Implication**: NO model could have converged in v37 or v38. Buyer rejected 100% of offers regardless of quality. The "v37 do-nothing collapse on 0.8B" diagnosis was wrong — it was the only stable strategy under "100% rejection + small invalid-action penalty." 4B in v38 was doing the workflow correctly (3.5+ propose/ep, 80% leads contacted) but had the same broken buyer.
+
+**Fix**: User provided fresh API keys 2026-05-09. Updated secrets.env. Verified gpt-5-mini responds with sensible JSON (accept/reject decisions with reasoning).
+
+**Cost of the diagnostic detour**: ~$15-50 on v37 (0.8B, ~35 steps) + ~$30-60 on v38 (4B, ~8 steps × ~7 min) = ~$45-110 total. The lesson is now captured in program.md #24 — this is THE silent failure mode to check first.
+
+**Retracted**: program.md lesson #24 "tool-attempt rate is the early collapse signal" — replaced with the buyer-auth-check rule. The 0.8B may or may not still have a capability ceiling for this env; v39 will tell us, this time with the buyer actually responding.
+
+---
+
+## 2026-05-09: v39 — return to Qwen3.5-0.8B with working buyer LLM
+
+**Status**: drafted, about to launch.
+**Key change vs v37**: real OPENAI_API_KEY in secrets.env. Same model (0.8B), same 2 leads, same reward shape. Now we can finally test what the v36 reward shape does on a base where the buyer responds.
+**Hypothesis**: with buyer ACCEPT path actually reachable (gpt-5-mini agrees to ~varying-but-nonzero offers), 0.8B has a chance to find conversions early enough to override the invalid-action penalty. If yes: cheapest tier validated, ride curriculum 2→20. If still degenerate (offers proposed but never accepted, model still collapses to do-nothing): then it really IS a 0.8B capability or reward-shape issue and we escalate one lever (probably reduce penalty before bumping base).
+**Mandatory check at step 0**: `metric_buyer_llm_call_count` MUST be > 0. If still 0, stop immediately — buyer broken again.
+
+---
+
 ## 2026-05-09: v38 — escalate base to Qwen3.5-4B after v37 do-nothing collapse
 
 **Status**: drafted, about to launch.

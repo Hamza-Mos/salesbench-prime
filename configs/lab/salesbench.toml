@@ -1,17 +1,16 @@
-# v38: escalate base 0.8B → 4B after v37 do-nothing collapse.
-# v37 (Qwen3.5-0.8B, 2 leads, run r90m00fyzu2o38wksjs24co4) ran 35 steps then
-# stopped at user request. Step 0 baseline showed the model attempting actions
-# (0.32 start_call/ep, 0.41 propose_offer/ep). By step ~14 the model fully
-# collapsed: 0 start_call, 0 quote_plan, 0 propose_offer, 0 leads_contacted,
-# num_turns ≈ 1. RL learned that "no action" is the optimal policy because the
-# invalid_action penalty (-0.005/error) was the only gradient — 0.8B never
-# successfully converted, so conversion reward stayed at 0 and couldn't
-# override the penalty. Documented capability-ceiling escalation trigger.
-# v38 keeps the same v36 reward shape (no quote_coverage, completion=0.02) and
-# the same 2-lead curriculum. ONLY change: base model 0.8B → 4B.
-# Reward shape ceiling 1.42, floor ~0.01.
+# v39: return to Qwen3.5-0.8B after fixing the actual root cause of v37/v38 failures.
+# v37 (0.8B) and v38 (4B) both had the OpenAI key 401-ing silently on every
+# buyer LLM call → deterministic REJECT for every offer → no path to conversion
+# regardless of base size. The v37 "0.8B capability ceiling" diagnosis was
+# wrong; the real cause was a broken OPENAI_API_KEY. Fixed in secrets.env on
+# 2026-05-09 — gpt-5-mini now responds with sensible JSON (verified locally).
+# v39 returns to the Eli-mtg strategy: smallest base, scale leads via
+# curriculum. With a real buyer in the loop, validate whether 0.8B + the v36
+# reward shape can actually find conversions and learn at 2 leads.
+# CRITICAL post-launch check: metric_buyer_llm_call_count must be > 0 by step 0.
+# If it's still 0, buyer is silently broken again — stop run immediately.
 
-model = "Qwen/Qwen3.5-4B"
+model = "Qwen/Qwen3.5-0.8B"
 max_steps = 200
 batch_size = 128
 rollouts_per_example = 32
@@ -39,5 +38,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3.5-4b-salesbench-v38"
+name = "qwen3.5-0.8b-salesbench-v39"
 entity = "hamza-mos-university-of-waterloo"
