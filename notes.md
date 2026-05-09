@@ -14,6 +14,22 @@
 
 ---
 
+## 2026-05-09: v41 — try Qwen3.5-2B (the skipped middle tier)
+
+**Status**: drafted, about to launch.
+**Run history context**:
+- v39 (0.8B): collapsed at step 26 (conv ~1%, do-nothing trap)
+- v40 (4B): step 0 reward 0.162 (11% ceiling), conv 22% — strong signal but stopped after 2 steps
+- v41 (2B): the untested middle, 2.5× cheaper per token than 4B
+**Strategy**: original Eli-mtg principle — smallest base that works. 4B was confirmed sufficient, but 2B might also work. Test it before committing to 4B economics for the full curriculum.
+**Hypothesis**: 2B has ~3× more capacity than 0.8B but ~2× less than 4B. If it can hold the workflow well enough to convert ≥5%/lead at step 0, the conv gradient will be strong enough to outpace the invalid_action penalty (unlike 0.8B's 0.5%). If it converges to do-nothing like 0.8B, fall back to 4B.
+**Watch for at step 0**:
+- buyer_llm_call_count > 0 (mandatory)
+- conv/ep > 0.1 (5% per lead) — viability threshold
+- propose/ep > 1 — workflow engagement
+
+---
+
 ## 2026-05-09: v40 — escalate to Qwen3.5-4B with working buyer (real first test)
 
 **Status**: drafted, about to launch.

@@ -1,16 +1,15 @@
-# v40: escalate base 0.8B → 4B after v39 confirmed real 0.8B capability ceiling.
-# v39 (run k5e8gdxdqa8qg4weh6j3svw7) ran 27 steps with the FIXED buyer LLM and
-# clearly collapsed: steps 0-8 engaged (propose 0.2/ep, conv 0.01-0.02/ep,
-# turns 20-29), steps 16-26 full do-nothing (propose=0, conv=0, turns=1-2).
-# The conv-reward gradient at ~1-2% of episodes was too sparse to override
-# the invalid_action penalty before GRPO converged on "do nothing."
-# v40 = same v36 reward shape, same 2 leads, ONE LEVER changed: model 0.8B → 4B.
-# v38 was supposed to test this but had the broken-buyer confounder; v40 is the
-# real first test of 4B with a working buyer. Buyer LLM verified working
-# 2026-05-09 — gpt-5-mini returns sensible JSON.
-# CRITICAL post-launch check: metric_buyer_llm_call_count must be > 0 by step 0.
+# v41: try Qwen3.5-2B (skipped tier between 0.8B-collapsed and 4B-working).
+# v39 (0.8B) collapsed at step 26; v40 (4B) showed reward 0.162 (11% of ceiling)
+# at step 0 with 22% conv rate. 2B is the untested middle tier — 2.5× cheaper
+# per token than 4B at $0.05/$0.15/$0.15 vs $0.10/$0.30/$0.30 per 1M.
+# Strategy stays the same: cheapest base that holds the workflow without
+# do-nothing collapse. If 2B step 0 shows >5% conv rate (vs 0.5% on 0.8B,
+# 22% on 4B), it's a viable middle ground. If 2B collapses like 0.8B,
+# fall back to 4B (proven working).
+# v36 reward shape unchanged. Working buyer LLM confirmed 2026-05-09.
+# CRITICAL post-launch check: metric_buyer_llm_call_count > 0 by step 0.
 
-model = "Qwen/Qwen3.5-4B"
+model = "Qwen/Qwen3.5-2B"
 max_steps = 200
 batch_size = 128
 rollouts_per_example = 32
@@ -38,5 +37,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3.5-4b-salesbench-v40"
+name = "qwen3.5-2b-salesbench-v41"
 entity = "hamza-mos-university-of-waterloo"

@@ -23,9 +23,10 @@ After Qwen3-30B-A3B-Instruct-2507 was retired and Prime introduced explicit trai
 
 | Phase | Base | Pricing ($/1M in/out/train) | Leads | Cost rationale |
 |-------|------|------------------------------|-------|----------------|
-| **A (current)** | `Qwen/Qwen3.5-0.8B` | $0.02 / $0.06 / $0.06 | 2→20 | Cheapest tier on Prime. Goal: prove the recipe + reward fix at minimum cost across the full curriculum. |
-| B (fallback) | `Qwen/Qwen3.5-4B` | $0.10 / $0.30 / $0.30 | step in if 0.8B can't hold tool discipline | ~5× cost of 0.8B; jump here only if 0.8B can't learn the current stage. |
-| C (fallback) | `Qwen/Qwen3.5-9B` | $0.20 / $0.60 / $0.60 | step in if 4B can't either | medium-sized; capability headroom for harder stages. |
+| A | `Qwen/Qwen3.5-0.8B` | $0.02 / $0.06 / $0.06 | tested v39, collapsed at step 26 | cheapest tier; conv signal too sparse to override invalid_action penalty before GRPO commits to do-nothing. |
+| **A.5 (current)** | `Qwen/Qwen3.5-2B` | $0.05 / $0.15 / $0.15 | testing v41 | middle tier between collapsed 0.8B and working 4B. ~2.5× cheaper than 4B per token. Try before paying 4B rates. |
+| B (fallback) | `Qwen/Qwen3.5-4B` | $0.10 / $0.30 / $0.30 | confirmed working v40 step 0 (reward 0.162, conv 22%) | proven capability; jump here if 2B also collapses. |
+| C (fallback) | `Qwen/Qwen3.5-9B` | $0.20 / $0.60 / $0.60 | step in if 4B saturates curriculum | medium-sized; capability headroom for harder stages. |
 | D (last resort) | `Qwen/Qwen3.5-35B-A3B` | $0.25 / $0.75 / $1.00 | only if every smaller tier fails | most expensive; only if needed. |
 
 Checkpoints don't transfer across base models — every escalation is a fresh start. The acceleration comes from confirming reward/curriculum design on the cheap tier before paying for capacity. **Never test a new reward shape on the expensive base first** (lesson #21).
