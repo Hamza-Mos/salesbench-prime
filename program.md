@@ -8,26 +8,27 @@ This program follows the [PraxLab](https://github.com/karpathy/autoresearch) aut
 
 ## 1. Task Description
 
-**Model**: tiered by curriculum stage — see "Model tiers" below. Currently `Qwen/Qwen3.5-4B` (v37 validation phase).
+**Model**: smallest base that can still learn the current curriculum stage — see "Model tiers" below. Currently `Qwen/Qwen3.5-0.8B` (v37 validation phase).
 **Task**: Train an insurance sales agent to maximize converted monthly recurring revenue (MRR) across a pipeline of leads within a time budget. The agent uses tool calls (CRM search, quoting, calling, proposing offers) to navigate leads, match products to needs, and close deals.
 **Environment type**: StatefulToolEnv (multi-turn, stateful tool use with per-episode state)
 **Primary goal**: Scale the agent via curriculum learning until it can **reliably handle 100 leads with a 100-hour time budget** — a full realistic sales workday. Each curriculum step adds leads and proves mastery (>95% of reward ceiling) before scaling further.
 **What "good" looks like**: The agent efficiently triages leads by temperature/need, opens calls, gets one quote per lead near their budget ceiling, proposes immediately, handles rejections with one revised offer, and moves on. It processes all leads within the time budget, maximizing both conversion rate AND premium capture (budget utilization). No wasted time on long pitches, redundant quotes, or hallucinated products. At 100 leads, it must prioritize ruthlessly, manage time across a full pipeline, and maintain high conversion + budget utilization at scale.
 **Primary metric**: `reward/mean` (weighted composite — higher = better, ceiling = 1.42 in v36+ reward shape)
 **Reward ceiling**: 1.42 (perfect episode: MRR=1.0, conv=1.0, completion=1.0, budget_util=1.0; v36 dropped `reward_quote_coverage` after env constraint made it redundant, scaled completion 0.10→0.02 to break floor trap)
-**Current state**: v37 (drafted, awaiting Prime wallet top-up) — Qwen3.5-4B, 2 leads, 1h, no checkpoint, max_steps=200. Validates v36 reward fix on cheap base before committing to 35B economics.
+**Current state**: v37 (ready to launch — wallet topped up 2026-05-08) — Qwen3.5-0.8B, 2 leads, 1h, no checkpoint, max_steps=200. Validates v36 reward fix on cheapest base. Strategy revised post-Eli mtg: stay on the smallest base and scale leads via curriculum 2→3→4→…→20, only escalating base if a real capability ceiling appears.
 
-### Model tiers (cost-tiered curriculum, May 2026+)
+### Model tiers (cost-tiered curriculum, revised 2026-05-08)
 
-After Qwen3-30B-A3B-Instruct-2507 was retired and Prime introduced explicit trainer-pod billing (May 7), per-step cost on the 35B-A3B successor is ~$30–75 — 200–700× higher than historical bundled rates. Strategy: use the smallest base that can still learn each curriculum stage.
+After Qwen3-30B-A3B-Instruct-2507 was retired and Prime introduced explicit trainer-pod billing (May 7), per-step cost on the 35B-A3B successor is ~$30–75 — 200–700× higher than historical bundled rates. **Default strategy** (post-Eli mtg): stay on the smallest base for the entire 2→20-lead curriculum. Only escalate base if the small model hits a *real capability ceiling* (conv rate flat, doesn't move with more steps), not a reward-signal issue.
 
-| Phase | Base | Leads | Cost rationale |
-|-------|------|-------|----------------|
-| **A (current)** | `Qwen/Qwen3.5-4B` | 2→6 | ~$3–5/h training-grade; validates reward shape at lowest possible cost. ~$5–15 per 50-step run. |
-| B | `Qwen/Qwen3.5-9B` | 6→20 | ~$5–10/h; medium leads where capability headroom matters. |
-| C | `Qwen/Qwen3.5-35B-A3B` | 20→100 | $20+/h; only when small models hit a capability ceiling. |
+| Phase | Base | Pricing ($/1M in/out/train) | Leads | Cost rationale |
+|-------|------|------------------------------|-------|----------------|
+| **A (current)** | `Qwen/Qwen3.5-0.8B` | $0.02 / $0.06 / $0.06 | 2→20 | Cheapest tier on Prime. Goal: prove the recipe + reward fix at minimum cost across the full curriculum. |
+| B (fallback) | `Qwen/Qwen3.5-4B` | $0.10 / $0.30 / $0.30 | step in if 0.8B can't hold tool discipline | ~5× cost of 0.8B; jump here only if 0.8B can't learn the current stage. |
+| C (fallback) | `Qwen/Qwen3.5-9B` | $0.20 / $0.60 / $0.60 | step in if 4B can't either | medium-sized; capability headroom for harder stages. |
+| D (last resort) | `Qwen/Qwen3.5-35B-A3B` | $0.25 / $0.75 / $1.00 | only if every smaller tier fails | most expensive; only if needed. |
 
-Checkpoints don't transfer across base models — each phase is a fresh start. The acceleration comes from confirming reward/curriculum design on the cheap tier before paying the expensive tier rate. **Never test a new reward shape on the expensive base first** (lesson #89).
+Checkpoints don't transfer across base models — every escalation is a fresh start. The acceleration comes from confirming reward/curriculum design on the cheap tier before paying for capacity. **Never test a new reward shape on the expensive base first** (lesson #21).
 
 ---
 
@@ -221,7 +222,8 @@ Target: **100 leads / 100 hours**. Current progression: **1 -> 2 -> 3 -> 4 -> 5 
 | v33 | 20 | 1.481 | 93% | DEGENERATE — skipped CRM and quoting entirely. Triggered env constraint. |
 | v34c | 15 | 1.387 | 87% | Quote-required env. Collapsed step 918. Floor trap. |
 | v35 | 12 | 1.002 | 63% | 1095 steps. Collapsed step 829. Floor trap (qc + completion). |
-| v37 (next) | 2 | — | — | Validation on Qwen3.5-4B + v36 reward fix (no qc, completion 0.02). |
+| v36 | 2 | — | — | STOPPED at step 0 — wallet exhausted. Qwen3.5-35B-A3B at $73/step. |
+| v37 (next) | 2 | — | — | Validation on Qwen3.5-0.8B + v36 reward fix (no qc, completion 0.02). |
 
 **When to scale up:**
 - Clean reward avg consistently >95% of ceiling for 50+ steps
@@ -243,11 +245,11 @@ Target: **100 leads / 100 hours**. Current progression: **1 -> 2 -> 3 -> 4 -> 5 
 
 ### Lever 4: Training Config
 
-Current proven config in `configs/lab/salesbench.toml`:
+Current config in `configs/lab/salesbench.toml` (v37):
 
 ```toml
-model = "Qwen/Qwen3-30B-A3B-Instruct-2507"
-max_steps = 1100
+model = "Qwen/Qwen3.5-0.8B"
+max_steps = 200
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
@@ -261,7 +263,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 6, total_hours = 1,
+args = { split = "train", num_examples = 2048, num_leads = 2, total_hours = 1,
          context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
@@ -401,11 +403,13 @@ Running 2 experiments on the same model can cause env server scheduling failures
 ## 8. Research Directions
 
 ### Near-Term (incremental)
-- **Reward weight tuning** as 6-lead performance saturates
-- **Scale to 7-8 leads** when 6-lead ceiling is reached
-- **Increase total_hours** to give more time per lead at higher counts
-- **Buyer archetype diversity** — per-archetype objections (canned, no LLM cost)
-- **Temperature distribution** — 40% cold leads to force harder triaging
+- **Validate v36 reward fix on 0.8B** at 2 leads — current v37 launch.
+- **Curriculum scale** 2 → 3 → 4 → 5 → 6 → 8 → 12 → 20 on the 0.8B base, only escalating base on a real capability ceiling.
+- **Buyer-prompt ablations (Eli ask, blog-ready content).** Training against an LLM user-sim is "still kind of unexplored" (Eli's words). Vary buyer system prompt and measure how seller behavior + reward shifts. Key risk to characterize: reward-hacking / overfitting to the buyer's quirks (cf. Vending Bench gaslighting). High-priority research artifact for the publication.
+- **Reward weight tuning** as components saturate at each curriculum stage.
+- **Increase total_hours** to give more time per lead at higher counts.
+- **Buyer archetype diversity** — per-archetype objections (canned, no LLM cost).
+- **Temperature distribution** — 40% cold leads to force harder triaging.
 
 ### Medium-Term (env redesign)
 - **Randomized difficulty per episode** — sample num_leads from {4,5,6,7} per episode (VCRL/Actor-Curator pattern)
@@ -415,8 +419,15 @@ Running 2 experiments on the same model can cause env server scheduling failures
 
 ### Long-Term (platform features)
 - **DAPO improvements** — clip-higher prevents entropy collapse, token-level loss upweights complex trajectories. Ask Prime.
-- **Larger model** — only when 30B can't learn (plateau below 50% conversion = capability ceiling). Qwen3 report shows distillation >> RL for very large models.
-- **Multi-env training** — combine salesbench with other agentic tasks for generalization
+- **Larger model** — only when the small base can't learn (plateau well below 50% conversion = capability ceiling). Qwen3 report shows distillation >> RL for very large models.
+- **Multi-env training** — combine salesbench with other agentic tasks for generalization.
+
+### Publication / blog roadmap (Eli mtg 2026-05-08)
+- **Frame as a new eval** with training runs included to demonstrate that real learning signal exists in the env. Positioned as "extended Vending Bench × tau-bench": long-horizon, stateful, time-budgeted, with an LLM buyer as the user-sim.
+- **Headline differentiator:** simulation physics (per-tool-call minute cost, X-hour budget, stateful CRM, do-not-call list) make the env faithful to real sales work — addressing the lack of a clean real-world "is this model better at sales" eval.
+- **Required content:** (a) curriculum-scaling results 2→20 leads, (b) buyer-prompt ablation study, (c) eval definition + leaderboard-ready harness.
+- **Co-publishing path:** Eli is interested. He's checking with Sebastian (residency lead) on the right format (boost vs. co-author vs. paper). We send a draft when ready.
+- See `~/.claude/projects/.../memory/project_eli_meeting_2026_05_08.md` for full meeting context.
 
 ### Key References
 - [Prime Intellect docs](https://docs.primeintellect.ai)
@@ -452,6 +463,6 @@ These are the most expensive lessons from 30+ versions. Violating any of them wa
 18. **Reward dips = error spikes.** Every time. Check `metric_error_type` before blaming the reward function.
 19. **When env constraint enforces a behavior, DROP the matching reward.** Redundant payoffs become floor traps. Keep only the metric for observability.
 20. **Floor:ceiling ratio < 1%.** Compute the no-outcome floor reward and verify it's negligible vs the outcome variance. Otherwise GRPO satisfices.
-21. **Validate reward shapes on the cheapest base.** Qwen3.5-4B at $3-5/h vs 35B-A3B at $20+/h. v33→v35 collapse chain cost ~$0 historically but ~$30k each at v36-class rates. Prove reward shape is healthy on 4B before scaling base.
+21. **Validate reward shapes on the cheapest base.** Qwen3.5-0.8B at $0.06/1M train tokens vs 35B-A3B at $1.00/1M (~17× cheaper). v33→v35 collapse chain cost ~$0 historically but ~$30k each at v36-class rates. Prove reward shape is healthy on 0.8B before scaling base.
 22. **Models can be retired without warning.** Qwen3-30B-A3B-Instruct-2507 was retired May 2026 mid-project. LoRA checkpoints become useless when base changes. Always run `prime rl models` before assuming previous config still works.
 23. **Always check team wallet before launching.** Prime auto-stops at $0. v36 hit `Stopped automatically: wallet balance exhausted` after 32 minutes of step 0. Use `prime_cli.core.client.APIClient.get('/billing/wallet?teamId=...')`.

@@ -1,27 +1,30 @@
 # SalesBench Lab Notebook
 
-## 2026-05-07: v37 plan — Drop to Qwen3.5-4B for cheap reward-shape validation (DRAFTED)
+## 2026-05-08: v37 LAUNCHED — Qwen3.5-0.8B + v36 reward fix
 
-**Strategy shift**: v36 step 0 cost $73.50 on Qwen3.5-35B-A3B. Extrapolating to full curriculum = $1.5M-3M envelope. Validate v36 reward fix on a 4B base first (~5-10× cheaper) before paying 35B economics.
+**Run**: `r90m00fyzu2o38wksjs24co4` (launched 2026-05-08, dashboard: https://app.primeintellect.ai/dashboard/training/r90m00fyzu2o38wksjs24co4)
+**Wallet**: $2,491.67 at launch (topped up after v36 exhausted it).
+**Model**: `Qwen/Qwen3.5-0.8B` — cheapest tier on Prime ($0.02/$0.06/$0.06 per 1M in/out/train). Revised down from 4B post-Eli mtg.
+**Config**: 2 leads, 1h, no checkpoint, max_steps=200, env v0.24.3.
 
-**Config (configs/lab/salesbench.toml)**:
-- `model = "Qwen/Qwen3.5-4B"`
-- `max_steps = 200` (50-100 productive steps is enough to validate reward signal)
-- `num_leads = 2, total_hours = 1` (proven fresh-GRPO sweet spot)
-- No checkpoint (4B is a different base from 35B; no transfer possible)
-- Reward fix carries over: ceiling 1.42, floor ~0.01
+**Strategy revision (Eli mtg 2026-05-08)**: drop the tiered base-size plan (4B→9B→35B). Stay on the smallest base for the entire 2→20-lead curriculum. Only escalate base on a real *capability* ceiling (conv flat across more steps), not a reward-signal issue. Goal: cheapest possible validation that the recipe + v36 reward fix work, then scale leads.
 
-**Cost target**: ~$5-15 for the full 200-step run vs ~$15k on 35B. If 4B can stably reach 1.0+ reward at 2 leads, the v36 reward shape is proven safe and we scale up — first leads on 4B (cheap), then base+leads together.
+**Reward fix unchanged from v36**: removed `reward_quote_coverage` (env enforces quote-before-propose; reward was a redundant 0.10 floor that GRPO locked onto in v34c/v35), scaled `reward_episode_completion` 0.10 → 0.02 (tie-breaker, not floor). Floor when no conversions: 0.15 → ~0.01 (15× reduction). Ceiling: 1.42.
 
-**Tiered scaling plan** (recorded in program.md):
-- Phase A (current): Qwen3.5-4B for 2→6 leads
-- Phase B: Qwen3.5-9B for 6→20 leads
-- Phase C: Qwen3.5-35B-A3B for 20→100 leads
-- Each phase fresh-start (checkpoints don't transfer across base models)
+**Hypothesis**:
+- (cheap-base capability) 0.8B can hold tool discipline well enough to learn at 2 leads. If yes: cheapest validation tier proven, ride it through curriculum.
+- (reward-shape) with the floor gone, GRPO has no degenerate local optimum. Conversion-seeking is the only path to >0.01 reward.
 
-**Hypothesis**: if 4B can't even climb at 2 leads with the new reward shape, the issue isn't capability — it's reward shape (cheap signal, fix and retry). If 4B climbs to 0.6+, scale curriculum on 4B until it caps, then upgrade base.
+**Watch for**:
+- Step-0 wall-clock (35B was 1810s; 0.8B should be much faster, target <300s/step at 2 leads).
+- Does it climb past 0.5 in <50 steps?
+- Reward variance bimodal-ish (good GRPO signal)?
+- Any `metric_error_type` spikes — 0.8B may struggle with structured tool calls.
+- If 0.8B can't even hold tool discipline (constant `no_tools_called` terminations or persistent error bursts), bump to 4B fallback per program.md tier table.
 
-**Awaiting**: Prime wallet top-up, then `prime rl run configs/lab/salesbench.toml`. Env v0.24.3 is already pushed.
+**Curriculum plan if v37 succeeds**: 2 → 3 → 4 → 5 → 6 → 8 → 12 → 20 on 0.8B. Scale only after >95% of ceiling for 50+ steps.
+
+**Blog roadmap (Eli ask)**: buyer-prompt ablation study now sits alongside curriculum scaling as a deliberate research artifact for the eventual publication. Co-publishing path TBD by Sebastian.
 
 ---
 
