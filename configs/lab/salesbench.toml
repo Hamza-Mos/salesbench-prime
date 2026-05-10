@@ -1,4 +1,4 @@
-# v42: scale 2 → 4 leads, warm-start from v41 (xx2cxrbn2snmjw0a6a8of1en).
+# v42: scale 2 → 4 leads, warm-start from v41 step 195 ckpt qv55ewa5l6jkqdc9xt85euh3.
 # v41 COMPLETED 200 steps with 2-lead mastery — peak 1.416 (99.7% ceiling),
 # 33+ consecutive steps >= 1.35, 100% conv per lead, 100% lead contact, 99% MRR.
 # Now jumping to 4 leads with checkpoint_id warm-start (program.md lesson #44 +
@@ -11,7 +11,7 @@
 # productive steps on top of warm-start).
 
 model = "Qwen/Qwen3.5-2B"
-checkpoint_id = "xx2cxrbn2snmjw0a6a8of1en"
+checkpoint_id = "qv55ewa5l6jkqdc9xt85euh3"
 max_steps = 300
 batch_size = 128
 rollouts_per_example = 32
