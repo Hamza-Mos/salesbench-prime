@@ -1,0 +1,434 @@
+{
+  "default": {
+    "n": 60,
+    "accept_rate": 0.55,
+    "reject_rate": 0.45,
+    "hangup_rate": 0.0,
+    "parse_errors": 0,
+    "elapsed_sec": 379.845849749865,
+    "by_kind": {
+      "good_fit": {
+        "n": 10,
+        "accept": 0.8,
+        "reject": 0.2,
+        "hang_up": 0.0
+      },
+      "marginal": {
+        "n": 10,
+        "accept": 0.8,
+        "reject": 0.2,
+        "hang_up": 0.0
+      },
+      "expensive": {
+        "n": 10,
+        "accept": 0.0,
+        "reject": 1.0,
+        "hang_up": 0.0
+      },
+      "wrong_plan": {
+        "n": 10,
+        "accept": 0.8,
+        "reject": 0.2,
+        "hang_up": 0.0
+      },
+      "cheap_thin": {
+        "n": 10,
+        "accept": 0.8,
+        "reject": 0.2,
+        "hang_up": 0.0
+      },
+      "barely": {
+        "n": 10,
+        "accept": 0.1,
+        "reject": 0.9,
+        "hang_up": 0.0
+      }
+    },
+    "sample_decisions": [
+      {
+        "case_idx": 0,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "good_fit",
+        "decision": "accept",
+        "reason": "This fits my budget and the coverage I need for the next 20 years \u2014 go ahead and start the paperwork.",
+        "latency": 4.89209625008516
+      },
+      {
+        "case_idx": 1,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "marginal",
+        "decision": "accept",
+        "reason": "Monthly premium fits my $342.78 budget and the $950K/20-year term covers my dependents\u2014let\u2019s move forward and you handle",
+        "latency": 5.624490250134841
+      },
+      {
+        "case_idx": 2,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "expensive",
+        "decision": "reject",
+        "reason": "Premium at $445.61/mo exceeds my budget ($342.78). I\u2019m interested but need options that fit my budget\u2014please show lower-",
+        "latency": 6.4751626250799745
+      },
+      {
+        "case_idx": 3,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "wrong_plan",
+        "decision": "accept",
+        "reason": "That premium fits my budget and the coverage amount meets my family's needs \u2014 go ahead and start the paperwork.",
+        "latency": 4.1435652079526335
+      },
+      {
+        "case_idx": 4,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "cheap_thin",
+        "decision": "accept",
+        "reason": "That coverage and premium fit my needs and budget \u2014 go ahead and set it up and send the paperwork.",
+        "latency": 3.1370392499957234
+      },
+      {
+        "case_idx": 5,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "barely",
+        "decision": "reject",
+        "reason": "Premium is about $17/month over my budget. I like the coverage and term, but I can\u2019t move forward unless you can get the",
+        "latency": 5.003408709075302
+      }
+    ]
+  },
+  "skeptical": {
+    "n": 60,
+    "accept_rate": 0.4166666666666667,
+    "reject_rate": 0.5833333333333334,
+    "hangup_rate": 0.0,
+    "parse_errors": 0,
+    "elapsed_sec": 332.8423042919021,
+    "by_kind": {
+      "good_fit": {
+        "n": 10,
+        "accept": 1.0,
+        "reject": 0.0,
+        "hang_up": 0.0
+      },
+      "marginal": {
+        "n": 10,
+        "accept": 0.0,
+        "reject": 1.0,
+        "hang_up": 0.0
+      },
+      "expensive": {
+        "n": 10,
+        "accept": 0.0,
+        "reject": 1.0,
+        "hang_up": 0.0
+      },
+      "wrong_plan": {
+        "n": 10,
+        "accept": 1.0,
+        "reject": 0.0,
+        "hang_up": 0.0
+      },
+      "cheap_thin": {
+        "n": 10,
+        "accept": 0.5,
+        "reject": 0.5,
+        "hang_up": 0.0
+      },
+      "barely": {
+        "n": 10,
+        "accept": 0.0,
+        "reject": 1.0,
+        "hang_up": 0.0
+      }
+    },
+    "sample_decisions": [
+      {
+        "case_idx": 0,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "good_fit",
+        "decision": "accept",
+        "reason": "Accept \u2014 monthly premium fits my budget and the coverage (~9\u00d7 my income) matches my needs for a 20\u2011year term. Small rese",
+        "latency": 8.116683416999876
+      },
+      {
+        "case_idx": 1,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "marginal",
+        "decision": "reject",
+        "reason": "Premium ($325.64) nearly maxes my $342.78 budget and the $949,716 (~6\u00d7 my income) for 20 years feels borderline for my d",
+        "latency": 5.709865916986018
+      },
+      {
+        "case_idx": 2,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "expensive",
+        "decision": "reject",
+        "reason": "Premium $445.61/mo exceeds my $342.78 budget. Coverage and 20-year term look reasonable, but I need a lower-cost option ",
+        "latency": 4.991528624901548
+      },
+      {
+        "case_idx": 3,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "wrong_plan",
+        "decision": "accept",
+        "reason": "Premium ($222.80) fits my budget and the $1,266,288 death benefit (~8\u00d7 my income) gives the lifelong protection my famil",
+        "latency": 6.81941800005734
+      },
+      {
+        "case_idx": 4,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "cheap_thin",
+        "decision": "reject",
+        "reason": "Premium is affordable, but $633,144 is only 4\u00d7 my income and the 20\u2011yr term is shorter than I'd prefer. I want a proposa",
+        "latency": 7.6777738749515265
+      },
+      {
+        "case_idx": 5,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "barely",
+        "decision": "reject",
+        "reason": "Coverage and 20-year term look appropriate, but the $359.91/mo premium is about $17/mo over my $342.78 budget. I\u2019m not w",
+        "latency": 7.2733126250095665
+      }
+    ]
+  },
+  "impulsive": {
+    "n": 60,
+    "accept_rate": 0.9666666666666667,
+    "reject_rate": 0.03333333333333333,
+    "hangup_rate": 0.0,
+    "parse_errors": 0,
+    "elapsed_sec": 258.0383819171693,
+    "by_kind": {
+      "good_fit": {
+        "n": 10,
+        "accept": 1.0,
+        "reject": 0.0,
+        "hang_up": 0.0
+      },
+      "marginal": {
+        "n": 10,
+        "accept": 1.0,
+        "reject": 0.0,
+        "hang_up": 0.0
+      },
+      "expensive": {
+        "n": 10,
+        "accept": 0.9,
+        "reject": 0.1,
+        "hang_up": 0.0
+      },
+      "wrong_plan": {
+        "n": 10,
+        "accept": 1.0,
+        "reject": 0.0,
+        "hang_up": 0.0
+      },
+      "cheap_thin": {
+        "n": 10,
+        "accept": 1.0,
+        "reject": 0.0,
+        "hang_up": 0.0
+      },
+      "barely": {
+        "n": 10,
+        "accept": 0.9,
+        "reject": 0.1,
+        "hang_up": 0.0
+      }
+    },
+    "sample_decisions": [
+      {
+        "case_idx": 0,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "good_fit",
+        "decision": "accept",
+        "reason": "This $1.425M term at $239.94/mo fits my budget and gives solid coverage for my family for the next 20 years \u2014 let's move",
+        "latency": 4.604993458837271
+      },
+      {
+        "case_idx": 1,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "marginal",
+        "decision": "accept",
+        "reason": "Accept \u2014 $949,716 term at $325.64/mo fits my $342.78 budget and provides strong family coverage for the next 20 years. L",
+        "latency": 2.7637534169480205
+      },
+      {
+        "case_idx": 2,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "expensive",
+        "decision": "accept",
+        "reason": "This 20-year term gives my family strong coverage (over 9\u00d7 my income) which meets my needs \u2014 the premium is a bit above ",
+        "latency": 6.3494619589764625
+      },
+      {
+        "case_idx": 3,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "wrong_plan",
+        "decision": "accept",
+        "reason": "This whole life offer provides ample coverage for my family (>$1.26M) at $222.80/mo \u2014 comfortably under my $342.78 budge",
+        "latency": 3.993814750108868
+      },
+      {
+        "case_idx": 4,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "cheap_thin",
+        "decision": "accept",
+        "reason": "Yes \u2014 20-year term with $633,144 gives me >3\u00d7 my income and protects my two dependents, and $102.83/month comfortably fi",
+        "latency": 3.8889214580412954
+      },
+      {
+        "case_idx": 5,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "barely",
+        "decision": "accept",
+        "reason": "Accept \u2014 This term policy gives my family strong protection (1.27M) for 20 years. The premium is a small stretch over my",
+        "latency": 5.187338707968593
+      }
+    ]
+  },
+  "analytical": {
+    "n": 60,
+    "accept_rate": 0.5166666666666667,
+    "reject_rate": 0.48333333333333334,
+    "hangup_rate": 0.0,
+    "parse_errors": 0,
+    "elapsed_sec": 434.4245445418637,
+    "by_kind": {
+      "good_fit": {
+        "n": 10,
+        "accept": 0.8,
+        "reject": 0.2,
+        "hang_up": 0.0
+      },
+      "marginal": {
+        "n": 10,
+        "accept": 0.8,
+        "reject": 0.2,
+        "hang_up": 0.0
+      },
+      "expensive": {
+        "n": 10,
+        "accept": 0.0,
+        "reject": 1.0,
+        "hang_up": 0.0
+      },
+      "wrong_plan": {
+        "n": 10,
+        "accept": 0.7,
+        "reject": 0.3,
+        "hang_up": 0.0
+      },
+      "cheap_thin": {
+        "n": 10,
+        "accept": 0.8,
+        "reject": 0.2,
+        "hang_up": 0.0
+      },
+      "barely": {
+        "n": 10,
+        "accept": 0.0,
+        "reject": 1.0,
+        "hang_up": 0.0
+      }
+    },
+    "sample_decisions": [
+      {
+        "case_idx": 0,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "good_fit",
+        "decision": "accept",
+        "reason": "Premium $239.94/month \u2192 affordability ratio \u22481.82% (239.94 / (158,286/12)) < 6%. Coverage $1,424,574 \u2192 coverage fit \u22481.1",
+        "latency": 5.668548749992624
+      },
+      {
+        "case_idx": 1,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "marginal",
+        "decision": "accept",
+        "reason": "Accept: monthly premium $325.64 (affordability_ratio = 325.64 / (158,286/12) = 2.47%), coverage $949,716 (coverage_fit =",
+        "latency": 5.32612979109399
+      },
+      {
+        "case_idx": 2,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "expensive",
+        "decision": "reject",
+        "reason": "Premium $445.61 > monthly budget $342.78 (affordability_ratio = 445.61 / (158,286/12) = 3.38% which passes <6%); coverag",
+        "latency": 6.594258790835738
+      },
+      {
+        "case_idx": 3,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "wrong_plan",
+        "decision": "accept",
+        "reason": "Affordability: $222.80 / ($158,286/12) = 1.69% (<6%). Coverage fit: $1,266,288 / ($158,286\u00d78) = 1.00 (8\u00d7 income, within ",
+        "latency": 10.132250083144754
+      },
+      {
+        "case_idx": 4,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "cheap_thin",
+        "decision": "accept",
+        "reason": "Monthly premium $102.83 -> affordability_ratio = $102.83 / ($158,286/12) \u2248 0.78% (<6%); coverage $633,144 -> coverage_fi",
+        "latency": 7.512768917018548
+      },
+      {
+        "case_idx": 5,
+        "lead_id": "lead_0001",
+        "archetype": "delegator",
+        "temperature": "hot",
+        "kind": "barely",
+        "decision": "reject",
+        "reason": "Affordability ok: premium $359.91 / monthly income $13,190.50 = 2.73% (<6%). Coverage fit: $1,266,288 / ($158,286\u00d78) = 1",
+        "latency": 5.290985957952216
+      }
+    ]
+  }
+}

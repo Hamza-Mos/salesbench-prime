@@ -88,6 +88,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         buyer_model: str = "gpt-5-mini",
         buyer_base_url: str = "https://api.openai.com/v1",
         buyer_api_key_var: str = "OPENAI_API_KEY",
+        buyer_prompt_variant: str = "default",
         **kwargs: Any,
     ) -> None:
         self.default_seed = default_seed
@@ -102,6 +103,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         self.buyer_model = buyer_model
         self.buyer_base_url = buyer_base_url
         self.buyer_api_key_var = buyer_api_key_var
+        self.buyer_prompt_variant = buyer_prompt_variant
 
         rubric = vf.Rubric(funcs=RUBRIC_FUNCS, weights=RUBRIC_WEIGHTS)
         super().__init__(
@@ -140,6 +142,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
                 model=self.buyer_model,
                 base_url=self.buyer_base_url,
                 api_key=os.getenv(self.buyer_api_key_var, ""),
+                prompt_variant=self.buyer_prompt_variant,
             )
         else:
             buyer_policy = RuleBasedBuyerPolicy(seed=config.seed + 17)
@@ -482,6 +485,7 @@ def load_environment(
     buyer_model: str = "gpt-5-mini",
     buyer_base_url: str = "https://api.openai.com/v1",
     buyer_api_key_var: str = "OPENAI_API_KEY",
+    buyer_prompt_variant: str = "default",
     max_turns: int | str = 10_000,
     max_examples: int | str = -1,
     system_prompt: str | None = None,
@@ -566,4 +570,5 @@ def load_environment(
         buyer_model=buyer_model,
         buyer_base_url=buyer_base_url,
         buyer_api_key_var=buyer_api_key_var,
+        buyer_prompt_variant=buyer_prompt_variant,
     )

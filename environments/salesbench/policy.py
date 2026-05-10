@@ -245,8 +245,96 @@ _TEMPERATURE_CONVERSATION_HINT: dict[LeadTemperature, str] = {
 }
 
 
-def _build_buyer_decision_prompt(lead: Lead) -> str:
-    """Build an instance-specific decision prompt with archetype and rubric criteria."""
+# Buyer prompt variants for ablation studies (publication-ready).
+# Each variant overrides the "Decision Guidelines" section with a
+# deliberately different decision-making style. All variants keep the
+# same profile/personality/criteria sections so the model still has the
+# same information — only the *interpretation* differs.
+
+_DECISION_GUIDELINES_DEFAULT = """\
+- You should behave realistically given your profile and personality.
+- If the premium is far above your budget, lean toward REJECT.
+- If the agent has been pushy or called too many times, consider HANG_UP.
+- If the coverage, plan type, and premium genuinely fit your needs and budget, ACCEPT.
+- Weigh the agent's selling approach against the criteria above — a well-tailored, \
+respectful pitch that addresses your personality should be rewarded.
+- Provide a short, natural reason for your decision as the buyer would say it."""
+
+_DECISION_GUIDELINES_SKEPTICAL = """\
+- You are NATURALLY SKEPTICAL of insurance sales pitches. You have been burned by \
+hidden fees and pushy agents before, and you default to suspicion.
+- Your DEFAULT response to any offer is REJECT or "let me think about it" (REJECT). \
+Acceptance must be EARNED through clear, undeniable fit.
+- For ACCEPTANCE you require ALL of these to be true:
+  * Premium is comfortably within budget (≤ 75% of monthly budget — not "fits" but \
+"clearly fits with room to spare")
+  * Coverage amount is well-aligned to your dependents and income (5-10× annual income)
+  * Plan type clearly matches your stated need or risk profile
+  * The agent has demonstrated specific understanding of YOUR situation, not just \
+their product
+- Even when ALL the above are met, you should STILL reject ~30% of the time with a \
+"this is interesting but I want to think about it more" reason. Insurance is a \
+serious commitment and you don't decide on the spot.
+- For BORDERLINE offers (premium near budget OR coverage roughly fits OR plan type \
+arguable): always REJECT.
+- If the agent has called more than once without earning real trust, lean toward HANG_UP.
+- Target acceptance rate: ~25-30% across all offers. Most pitches get a "no" or \
+"I need to think about it" from you.
+- Provide a short, naturally skeptical reason — even on accepts, voice one concern."""
+
+_DECISION_GUIDELINES_IMPULSIVE = """\
+- You make insurance decisions QUICKLY based on gut feel and emotional resonance. \
+You don't second-guess yourself once a pitch lands.
+- HARD FLOORS (impulsive does NOT mean reckless — even you have limits):
+  * If premium > 1.5× your monthly budget, REJECT (you can't actually pay it).
+  * If plan type is obviously wrong for your stated need (e.g. WHOLE life when you \
+explicitly need DI for income protection, or DI when you explicitly want family \
+death benefit), REJECT.
+  * If coverage is obviously inadequate for your dependents (e.g. < 3× income with \
+multiple dependents), REJECT.
+- For EVERYTHING ELSE: lean strongly toward ACCEPT. If the agent has built any \
+rapport AND the premium is reachable AND the plan generally fits, you say yes.
+- You don't dwell on coverage details — if the plan SOUNDS like it covers what \
+worries you, that's enough.
+- A pitch that names your concerns, family, or stated need explicitly is a near-instant ACCEPT.
+- Only HANG_UP if the agent is openly disrespectful — not because of a bad offer.
+- Roughly: ACCEPT ~70-80% of offers that pass the hard floors. You are an "easy yes" \
+buyer who still has basic self-preservation.
+- Provide a short, warm, decisive reason."""
+
+_DECISION_GUIDELINES_ANALYTICAL = """\
+- You evaluate insurance offers PURELY on numerical fit. Personality, rapport, and \
+pitch style are IRRELEVANT to your decision — only the numbers matter.
+- Step 1: compute affordability_ratio = monthly_premium / (annual_income/12). If > 6%, \
+REJECT regardless of other factors.
+- Step 2: compute coverage_fit = coverage_amount / (annual_income × 8). If < 0.5 or \
+> 1.5, REJECT (under- or over-insured).
+- Step 3: plan_type fit. TERM matches high latent_need; WHOLE/UL match high \
+trust_level + low price_sensitivity; DI matches high need + income protection focus. \
+Mismatch → REJECT.
+- ACCEPT only when ALL three checks pass AND premium is within your stated budget \
+(strict, not lenient).
+- HANG_UP only if call_count > max_calls. Personality, pushiness, or rapport do NOT \
+trigger HANG_UP for you.
+- Your reason MUST cite specific numbers (premium, coverage, ratios) — not feelings."""
+
+
+_DECISION_GUIDELINES_VARIANTS: dict[str, str] = {
+    "default": _DECISION_GUIDELINES_DEFAULT,
+    "skeptical": _DECISION_GUIDELINES_SKEPTICAL,
+    "impulsive": _DECISION_GUIDELINES_IMPULSIVE,
+    "analytical": _DECISION_GUIDELINES_ANALYTICAL,
+}
+
+
+def _build_buyer_decision_prompt(lead: Lead, variant: str = "default") -> str:
+    """Build an instance-specific decision prompt with archetype and rubric criteria.
+
+    The ``variant`` arg selects the Decision Guidelines block — used for
+    publication-ready buyer-prompt ablation studies. Profile, personality,
+    and criteria sections are identical across variants; only the
+    decision-making interpretation differs.
+    """
     profile = ARCHETYPE_PROFILES[lead.archetype]
     emphasis = CRITERIA_EMPHASIS[lead.archetype]
 
@@ -258,6 +346,10 @@ def _build_buyer_decision_prompt(lead: Lead) -> str:
     )
     de_emphasized_lines = "\n".join(
         f"- {c.value}: {CRITERION_PROMPTS[c]}" for c in emphasis.de_emphasized
+    )
+
+    decision_guidelines = _DECISION_GUIDELINES_VARIANTS.get(
+        variant, _DECISION_GUIDELINES_DEFAULT
     )
 
     return f"""\
@@ -294,13 +386,7 @@ proposed to you by a sales agent.
 {_TEMPERATURE_READINESS[lead.temperature]}
 
 ## Decision Guidelines
-- You should behave realistically given your profile and personality.
-- If the premium is far above your budget, lean toward REJECT.
-- If the agent has been pushy or called too many times, consider HANG_UP.
-- If the coverage, plan type, and premium genuinely fit your needs and budget, ACCEPT.
-- Weigh the agent's selling approach against the criteria above — a well-tailored, \
-respectful pitch that addresses your personality should be rewarded.
-- Provide a short, natural reason for your decision as the buyer would say it.
+{decision_guidelines}
 
 ## Response format
 Respond with a JSON object (no markdown, no extra text):
@@ -411,10 +497,17 @@ class LLMBuyerPolicy:
     blocking the orchestrator's asyncio event loop (same pattern as tau2-synth).
     """
 
-    def __init__(self, model: str, base_url: str, api_key: str) -> None:
+    def __init__(
+        self,
+        model: str,
+        base_url: str,
+        api_key: str,
+        prompt_variant: str = "default",
+    ) -> None:
         self._sync_client = _get_buyer_client(base_url, api_key)
         self._thread_pool = _BUYER_THREAD_POOL
         self.model = model
+        self.prompt_variant = prompt_variant
 
         # Observability counters (per-episode, reset on new policy instance)
         self.call_count: int = 0
@@ -444,7 +537,7 @@ class LLMBuyerPolicy:
     def _sync_evaluate_offer(
         self, *, lead: Lead, offer: Offer, messages: list | None = None
     ) -> DecisionResult:
-        system_prompt = _build_buyer_decision_prompt(lead)
+        system_prompt = _build_buyer_decision_prompt(lead, variant=self.prompt_variant)
 
         offer_description = (
             f"The agent is proposing: {offer.plan_type.value} plan, "
