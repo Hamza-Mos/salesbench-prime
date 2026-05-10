@@ -1,0 +1,38 @@
+# Eval cell: TRAINED Qwen3.5-2B (v44 ckpt), IMPULSIVE buyer.
+# Tests whether the trained model still does meaningful work against a
+# very easy buyer (~100% accept rate baseline). Risk: if everything
+# accepts, the seller's contribution is masked. Compare to default for
+# the "buyer makes the agent look better/worse" effect size.
+# Replace <V44_CKPT_ID> + override max_steps at launch.
+
+model = "Qwen/Qwen3.5-2B"
+checkpoint_id = "<V44_CKPT_ID>"
+max_steps = 999
+batch_size = 128
+rollouts_per_example = 32
+oversampling_factor = 1.0
+max_async_level = 1
+learning_rate = 1e-5
+lora_alpha = 64
+env_file = ["../../secrets.env"]
+
+[sampling]
+max_tokens = 4096
+temperature = 1.0
+
+[[env]]
+id = "salesbench/salesbench"
+args = { split = "eval", num_examples = 128, num_leads = 50, total_hours = 50, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000, buyer_prompt_variant = "impulsive" }
+
+[buffer]
+online_difficulty_filtering = false
+seed = 9001
+
+[checkpoints]
+interval = 5
+keep_cloud = 5
+
+[wandb]
+project = "salesbench-eval"
+name = "eval-trained-impulsive-50leads"
+entity = "hamza-mos-university-of-waterloo"

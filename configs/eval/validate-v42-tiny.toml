@@ -1,0 +1,41 @@
+# VALIDATION cell: tiny eval against v42 checkpoint to confirm the
+# eval-as-1-step-train architecture works end-to-end.
+#
+# Uses v42 ckpt step 215 (= nj5i3p9hr6q8q46tvzhjcnmn).
+# 8 leads, 4h budget (matching v42's training distribution), batch=32
+# for fast turnaround. Should run in ~10-20 min.
+#
+# Expected: reward ~1.35-1.40 (matches v42 final), conv ~3.85-3.95/4,
+# zero parse errors, metrics populated.
+
+model = "Qwen/Qwen3.5-2B"
+checkpoint_id = "nj5i3p9hr6q8q46tvzhjcnmn"
+max_steps = 216  # v42 ckpt at 215, so 215+1
+batch_size = 32  # smaller for fast validation
+rollouts_per_example = 16
+oversampling_factor = 1.0
+max_async_level = 1
+learning_rate = 1e-5
+lora_alpha = 64
+env_file = ["../../secrets.env"]
+
+[sampling]
+max_tokens = 4096
+temperature = 1.0
+
+[[env]]
+id = "salesbench/salesbench"
+args = { split = "eval", num_examples = 32, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000, buyer_prompt_variant = "default" }
+
+[buffer]
+online_difficulty_filtering = false
+seed = 9001
+
+[checkpoints]
+interval = 5
+keep_cloud = 5
+
+[wandb]
+project = "salesbench-eval"
+name = "validate-v42-tiny"
+entity = "hamza-mos-university-of-waterloo"

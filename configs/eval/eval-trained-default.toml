@@ -1,0 +1,41 @@
+# Eval cell: TRAINED Qwen3.5-2B (v44 ckpt), default buyer.
+# Headline trained number for the blog. Compare directly to
+# eval-untrained-default.toml to compute the generalization claim:
+# "trained on 20 leads, evaluated on 50, untrained baseline X → trained Y."
+#
+# IMPORTANT: replace <V44_CKPT_ID> with the actual checkpoint ID after
+# v44 finishes (get via: prime rl checkpoints <v44-run-id>).
+# max_steps must be > checkpoint step (per program.md lesson #71).
+# Use the highest checkpoint step, set max_steps = ckpt_step + 1.
+
+model = "Qwen/Qwen3.5-2B"
+checkpoint_id = "<V44_CKPT_ID>"
+max_steps = 999  # placeholder; must be > v44 ckpt step. Override at launch.
+batch_size = 128
+rollouts_per_example = 32
+oversampling_factor = 1.0
+max_async_level = 1
+learning_rate = 1e-5
+lora_alpha = 64
+env_file = ["../../secrets.env"]
+
+[sampling]
+max_tokens = 4096
+temperature = 1.0
+
+[[env]]
+id = "salesbench/salesbench"
+args = { split = "eval", num_examples = 128, num_leads = 50, total_hours = 50, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000, buyer_prompt_variant = "default" }
+
+[buffer]
+online_difficulty_filtering = false
+seed = 9001
+
+[checkpoints]
+interval = 5
+keep_cloud = 5
+
+[wandb]
+project = "salesbench-eval"
+name = "eval-trained-default-50leads"
+entity = "hamza-mos-university-of-waterloo"
