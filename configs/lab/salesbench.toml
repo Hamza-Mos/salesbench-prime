@@ -1,18 +1,14 @@
-# v42: scale 2 → 4 leads, warm-start from v41 step 195 ckpt qv55ewa5l6jkqdc9xt85euh3.
-# v41 COMPLETED 200 steps with 2-lead mastery — peak 1.416 (99.7% ceiling),
-# 33+ consecutive steps >= 1.35, 100% conv per lead, 100% lead contact, 99% MRR.
-# Now jumping to 4 leads with checkpoint_id warm-start (program.md lesson #44 +
-# Option A scale-up). Fast scaling path: 2→4→8→20→50→100 (5 stages instead of
-# 11), each warm-started. Expected to converge in ~50-100 productive steps
-# instead of 200.
-# Reward shape unchanged (v36, ceiling 1.42, floor ~0.01).
-# total_hours scaled proportionally (4 × 30 min/lead = 2h).
-# max_steps = 300 (per lesson #71: must be > checkpoint step 199, allow ~100
-# productive steps on top of warm-start).
+# v43: scale 4 → 8 leads, warm-start from v42 step 215 ckpt nj5i3p9hr6q8q46tvzhjcnmn.
+# v42 (4 leads) MASTERED: 9/9 consecutive steps >= 1.35, avg 1.384 (97.5% ceiling),
+# conv 96-99% per lead, MRR 96-99%, invalid_actions 0.10-0.29 (cleanest yet).
+# Now jumping to 8 leads (2× scale). Same v36 reward shape, same fast-curriculum
+# strategy: 2→4→8→20 (then eval at 100 leads).
+# total_hours = 4 (30 min/lead, proportional).
+# max_steps = 315 (= ckpt step 215 + 100 productive steps).
 
 model = "Qwen/Qwen3.5-2B"
-checkpoint_id = "qv55ewa5l6jkqdc9xt85euh3"
-max_steps = 300
+checkpoint_id = "nj5i3p9hr6q8q46tvzhjcnmn"
+max_steps = 315
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
@@ -27,7 +23,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "train", num_examples = 2048, num_leads = 8, total_hours = 4, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
@@ -39,5 +35,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3.5-2b-salesbench-v42"
+name = "qwen3.5-2b-salesbench-v43"
 entity = "hamza-mos-university-of-waterloo"
