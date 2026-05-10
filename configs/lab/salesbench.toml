@@ -1,16 +1,18 @@
-# v41: try Qwen3.5-2B (skipped tier between 0.8B-collapsed and 4B-working).
-# v39 (0.8B) collapsed at step 26; v40 (4B) showed reward 0.162 (11% of ceiling)
-# at step 0 with 22% conv rate. 2B is the untested middle tier — 2.5× cheaper
-# per token than 4B at $0.05/$0.15/$0.15 vs $0.10/$0.30/$0.30 per 1M.
-# Strategy stays the same: cheapest base that holds the workflow without
-# do-nothing collapse. If 2B step 0 shows >5% conv rate (vs 0.5% on 0.8B,
-# 22% on 4B), it's a viable middle ground. If 2B collapses like 0.8B,
-# fall back to 4B (proven working).
-# v36 reward shape unchanged. Working buyer LLM confirmed 2026-05-09.
-# CRITICAL post-launch check: metric_buyer_llm_call_count > 0 by step 0.
+# v42: scale 2 → 4 leads, warm-start from v41 (xx2cxrbn2snmjw0a6a8of1en).
+# v41 COMPLETED 200 steps with 2-lead mastery — peak 1.416 (99.7% ceiling),
+# 33+ consecutive steps >= 1.35, 100% conv per lead, 100% lead contact, 99% MRR.
+# Now jumping to 4 leads with checkpoint_id warm-start (program.md lesson #44 +
+# Option A scale-up). Fast scaling path: 2→4→8→20→50→100 (5 stages instead of
+# 11), each warm-started. Expected to converge in ~50-100 productive steps
+# instead of 200.
+# Reward shape unchanged (v36, ceiling 1.42, floor ~0.01).
+# total_hours scaled proportionally (4 × 30 min/lead = 2h).
+# max_steps = 300 (per lesson #71: must be > checkpoint step 199, allow ~100
+# productive steps on top of warm-start).
 
 model = "Qwen/Qwen3.5-2B"
-max_steps = 200
+checkpoint_id = "xx2cxrbn2snmjw0a6a8of1en"
+max_steps = 300
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
@@ -25,7 +27,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 2, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
@@ -37,5 +39,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench"
-name = "qwen3.5-2b-salesbench-v41"
+name = "qwen3.5-2b-salesbench-v42"
 entity = "hamza-mos-university-of-waterloo"
