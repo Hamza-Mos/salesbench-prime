@@ -18,4 +18,4 @@ v39	k5e8gdxdqa8qg4weh6j3svw7	2	27	-0.0000	0%	~1%	-	-	STOPPED	Buyer LLM working (
 v40	s5ytsm49prh11jyh69ngdfrp	2	2	0.162	11%	22%	-	-	STOPPED	4B + working buyer step 0 = 0.162 reward, 22% conv (0.45/ep). Strong learning signal but stopped to test 2B first per "smallest base that works" strategy.
 v41	xx2cxrbn2snmjw0a6a8of1en	2	199	1.416	99.7%	100%	99.6%	99%	COMPLETED	2-lead MASTERED on Qwen3.5-2B. 33+ consecutive steps >= 1.35 (158-199). 100% conv per lead, 100% contact, 99% MRR. Cost ~$80-150. Most successful run in project history.
 v42	y9umdopamm1mgqo6tenl9ode	4	218	1.401	98.6%	98.5%	98.8%	98%	STOPPED	4-lead MASTERED on Qwen3.5-2B. 9/9 consecutive steps >= 1.35 (avg 1.384). Warm-start transfer from v41 immediate (step 195 first metric = 1.359 = 95.7% ceiling). Cost ~$30-60.
-v43	(pending)	8	(drafted)	-	-	-	-	-	DRAFTED	Scale 4→8 leads, warm-start from v42 ckpt nj5i3p9hr6q8q46tvzhjcnmn (step 215). total_hours=4.
+v43	hzenawf8ji4k8a5gubvqqv19	8	(launched)	-	-	-	-	-	RUNNING	Scale 4→8 leads, warm-start from v42 ckpt nj5i3p9hr6q8q46tvzhjcnmn (step 215). total_hours=4. env v0.25.0.
