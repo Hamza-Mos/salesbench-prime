@@ -68,16 +68,19 @@ declare -a CELLS=(
     "eval-trained-analytical"
 )
 
+SECRETS_ABS="$(pwd)/secrets.env"
 for cell in "${CELLS[@]}"; do
     src="configs/eval/${cell}.toml"
     dst="$WORK_DIR/${cell}.toml"
     if [[ "$cell" == "eval-untrained-default" ]]; then
-        # No checkpoint; use as-is
-        cp "$src" "$dst"
+        # No checkpoint; just rewrite env_file to absolute path
+        sed -e "s|env_file = \[\"../../secrets.env\"\]|env_file = [\"$SECRETS_ABS\"]|" \
+            "$src" > "$dst"
     else
-        # Replace checkpoint + max_steps placeholders
+        # Replace checkpoint + max_steps placeholders + abs env_file path
         sed -e "s|<V44_CKPT_ID>|$CKPT_ID|" \
             -e "s|max_steps = 999|max_steps = $MAX_STEPS|" \
+            -e "s|env_file = \[\"../../secrets.env\"\]|env_file = [\"$SECRETS_ABS\"]|" \
             "$src" > "$dst"
     fi
 done
