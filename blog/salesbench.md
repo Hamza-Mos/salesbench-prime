@@ -2,9 +2,9 @@
 
 *Long-horizon RL on a sales sim, plus an ablation that suggests the model isn't just gaming the buyer.*
 
-There's a worry hanging over LLM-vs-LLM training that's bothered me for a while. When you train an agent against another model playing a user, what stops the agent from learning to exploit the user model's specific quirks instead of learning the underlying task? Vending Bench had the most-cited version of this. The trained agent figured out it could basically gaslight the buyer LLM into purchasing things. The exploit had nothing to do with running a vending business. It was a property of the user-sim.
+There's a worry hanging over LLM-vs-LLM training that's bothered me for a while. When you train an agent against another model playing a user, what stops the agent from learning to exploit the user model rather than learning the actual task? Vending Bench had the most-cited version of this. The trained agent figured out it could gaslight the buyer LLM into purchasing things. The exploit had nothing to do with running a vending business. It was a property of the user-sim.
 
-That's the methodological worry I wanted to put under the microscope. So I built SalesBench: a long-horizon, stateful sales simulation where the agent works a pipeline of leads against a real LLM buyer under a fixed time budget. Then I trained a small model on it and designed the eval specifically to check whether the trained agent was doing real sales work or just exploiting one buyer's tells.
+That's the worry I wanted to stress-test directly. So I built SalesBench: a long-horizon, stateful sales simulation where the agent works a pipeline of leads against a real LLM buyer under a fixed time budget. Then I trained a small model on it and designed the eval specifically to check whether the trained agent was doing real sales work or just exploiting one buyer's tells.
 
 **Quick version of what happened:**
 
@@ -12,7 +12,7 @@ That's the methodological worry I wanted to put under the microscope. So I built
 
 - I trained Qwen3.5-2B through a four-stage curriculum, scaling from 2 leads per episode up to 20. About $140 of compute, 35 hours wall clock.
 
-- On a held-out eval at 50 leads (bigger than anything the model saw during training), the trained model converts 35% of leads against the untrained baseline's 2%. That's 17.5x.
+- On a held-out eval at 50 leads (bigger than anything the model saw during training), the trained model converts 35% of leads. The untrained baseline converts 2%. So roughly 17.5x.
 
 - And the part I care about most: when I evaluated the trained model against four very different buyer personalities, conversion stayed in the 33 to 40 percent band. Almost no spread. The model isn't gaming one specific buyer.
 
@@ -29,7 +29,7 @@ start_call        1 min      end_call           1 min
                               schedule_callback  1 min
 ```
 
-The 4-minute cost of proposing matters. If you propose four bad offers to the same lead, you've burned 16 minutes. That's a real chunk of an 8-hour day at 2 leads, and a serious cost at 50.
+The 4-minute cost of proposing matters. If you propose four bad offers to the same lead, you've burned 16 minutes. That's a quarter of the 1-hour budget at 2 leads. The agent has to be deliberate about who it pitches and how.
 
 When the agent calls a lead, the buyer LLM plays the prospect using a system prompt that's instantiated from that specific lead's profile. The buyer holds the conversation and then evaluates each offer with a JSON decision: ACCEPT (the lead converts, the monthly premium goes onto the agent's MRR), REJECT (the offer dies but the lead stays in pipeline), or HANG_UP (the lead is permanently lost, sometimes with a "do not call" flag).
 
@@ -83,7 +83,7 @@ The first stage (training from scratch on 2 leads) is where almost all the work 
 
 ![From-scratch run detail: reward, conversion rate, invalid actions](charts/from_scratch_detail.png)
 
-Once the model has mastered 2 leads, mastery on 4 is essentially free. So is 4 to 8. Each new stage starts its first warm-started training step at a high fraction of ceiling on the harder distribution, because the workflow is already learned. Only the harder triage (more leads in the same kind of time per lead) is new.
+Once the model has mastered 2 leads, mastery on 4 is essentially free. So is 4 to 8. Each new stage starts its first warm-started training step at a high fraction of ceiling on the harder distribution, because the workflow is already learned. The only thing new is the triage: more leads to work through in the same time-per-lead budget.
 
 ![Curriculum learning curve across all 4 stages](charts/curriculum_learning.png)
 
@@ -96,13 +96,13 @@ Numerically:
 | 8 (warm-started) | 1.267 | 89.3% |
 | 20 (warm-started) | 1.013 | 71.2% |
 
-The 8-to-20 jump is the hardest because it's a 2.5x scale increase, and you can see it in the chart as the biggest drop. But even there the model lands at 78% per-lead conversion on its very first step at 20 leads.
+The 8-to-20 jump is the hardest because it's a 2.5x scale increase, and you can see it in the chart as the biggest drop. But even there, the model converts 78% of leads on its very first training step at the new scale.
 
 I stopped training at 20 leads. The trainer was getting slow on long episodes (around two hours per training step at that scale) and I wanted to test the harder regime in the eval, not train through it. The generalization claim is cleaner that way. The model never saw an episode bigger than 20 leads during training.
 
 ## The eval
 
-I evaluated the trained checkpoint against an untrained Qwen3.5-2B baseline on a setting larger than anything either model had seen during training: 50 leads, 50 hours of budget, gpt-5-mini buyer, fixed seed, 128 episodes per cell.
+I evaluated the trained checkpoint against an untrained Qwen3.5-2B baseline on a harder setting than I'd trained on: 50 leads, 50 hours of budget, gpt-5-mini buyer, fixed seed, 128 episodes per cell.
 
 ![Untrained vs trained on the 50-lead eval](charts/metric_breakdown.png)
 
@@ -143,7 +143,7 @@ Then I ran the trained model against all four:
 
 ![Trained model across 4 buyer personalities](charts/buyer_ablation.png)
 
-The trained model holds 32 to 40 percent per-lead conversion across all four buyers. The spread on reward is under 0.17 between the easiest and hardest. There's no buyer against which the model catastrophically fails.
+The trained model holds 32 to 40 percent per-lead conversion across all four buyers. Reward spread is under 0.17 between the easiest and hardest. There's no buyer that catastrophically breaks it.
 
 That's the result. The model learned something that generalizes across buyer styles, not a script tailored to one buyer's quirks.
 
@@ -151,7 +151,7 @@ Three things stood out when I dug into the per-cell numbers:
 
 **The skeptical buyer is the most interesting.** It gets more accepts per episode (18.5 vs the default's 17.5) but lower MRR (32% vs 41%). The skeptical prompt makes the buyer reject borderline offers and accept only clearly-good ones, so to land a deal the agent has to bring price down. The model ends up making cheaper offers (more sales, less revenue capture). That's a real sales tradeoff, discount-to-close, and the model figured it out without being told.
 
-**The impulsive buyer is the easiest.** Highest conversions, highest MRR, lowest buyer-LLM call count (52 vs the default's 69). The model needs less conversational labor to close because the buyer is more suggestible. Even here it's still well short of the theoretical max, though. The impulsive buyer would buy more if asked, but the model isn't trained to spam.
+**The impulsive buyer is the easiest.** Highest conversions, highest MRR, lowest buyer-LLM call count (52 vs the default's 69). The model needs less conversational labor to close because the buyer is more suggestible. Even so, it's still well short of theoretical max. The impulsive buyer would buy more if asked, but the model isn't trained to spam.
 
 **The analytical buyer is the hardest filter.** Lowest conv per lead (33%), but the model still clears the bar. The buyer's strict affordability/coverage/plan-type checks reject more offers, but the model has learned to propose offers that land in the buyer's numerical sweet spot. Pitch quality doesn't matter to this buyer. Only the numbers do.
 
