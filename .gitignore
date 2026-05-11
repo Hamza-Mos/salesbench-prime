@@ -22,3 +22,6 @@ environments/*/.prime/*
 secrets.env
 
 training_docs.md
+
+# Claude Code local session files
+.claude/
