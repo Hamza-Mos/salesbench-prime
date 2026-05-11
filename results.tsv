@@ -20,8 +20,8 @@ v41	xx2cxrbn2snmjw0a6a8of1en	2	199	1.416	99.7%	100%	99.6%	99%	COMPLETED	2-lead M
 v42	y9umdopamm1mgqo6tenl9ode	4	218	1.401	98.6%	98.5%	98.8%	98%	STOPPED	4-lead MASTERED on Qwen3.5-2B. 9/9 consecutive steps >= 1.35 (avg 1.384). Warm-start transfer from v41 immediate (step 195 first metric = 1.359 = 95.7% ceiling). Cost ~$30-60.
 v43	hzenawf8ji4k8a5gubvqqv19	8	216	1.273	89.6%	91.6%	-	-	STOPPED	8-lead near-instant mastery. Step 215 (first warm-start) reward 1.267 = 89% ceiling, conv 7.31/8 (91% per lead), contact 7.70/8 (96%). Stopped after 2 steps to jump to v44 (20 leads).
 v44	lxgzps32bpj5cp3olulbljwz	20	217	1.019	71.7%	78.5%	73.4%	74%	STOPPED	20-lead warm-start strong: step 215 reward 1.013 (71% ceiling), 78% conv/lead, 85% lead contact. Trainer bottlenecked at ~134min/step → stopped after 3 steps. Ckpt s6720p6lp52faz7ue9twxwu1 used for eval matrix.
-eval	mp1s4q7p3dhffrobtcnsia2w	50	(running)	-	-	-	-	-	RUNNING	Eval cell: untrained Qwen3.5-2B baseline, default buyer.
-eval	ae2nwqy98s3vj1s3lv50kcus	50	(running)	-	-	-	-	-	RUNNING	Eval cell: TRAINED (v44 ckpt s6720p6lp52faz7ue9twxwu1), default buyer. Headline trained number.
-eval	pjg72bm101yu08z8mpb3ed4d	50	(running)	-	-	-	-	-	RUNNING	Eval cell: TRAINED, SKEPTICAL buyer (ablation).
-eval	eefc6is608vzoem4aotsfohk	50	(running)	-	-	-	-	-	RUNNING	Eval cell: TRAINED, IMPULSIVE buyer (ablation).
-eval	xuz9c28whzcpyc2ty3qf0x57	50	(running)	-	-	-	-	-	RUNNING	Eval cell: TRAINED, ANALYTICAL buyer (ablation).
+eval	mp1s4q7p3dhffrobtcnsia2w	50	1	-0.035	-	2.0%	0.2%	0.2%	COMPLETED	Untrained baseline. Reward -0.035, 1.02 conv/50, 5% contact. Basically non-functional.
+eval	ae2nwqy98s3vj1s3lv50kcus	50	1	0.490	-	35.1%	40.8%	33.9%	COMPLETED	HEADLINE: trained-default. 17.5× conv vs untrained, 205× MRR.
+eval	pjg72bm101yu08z8mpb3ed4d	50	1	0.377	-	37.0%	31.9%	26.5%	COMPLETED	trained+skeptical buyer. Robust — more accepts than default, lower MRR (skeptical forces lower-price offers).
+eval	eefc6is608vzoem4aotsfohk	50	1	0.549	-	39.5%	45.1%	38.1%	COMPLETED	trained+impulsive. Best conv + highest MRR (easy buyer + good offer selection).
+eval	xuz9c28whzcpyc2ty3qf0x57	50	1	0.445	-	32.8%	37.4%	31.6%	COMPLETED	trained+analytical. Lowest conv but model survives numerical-only filter.
