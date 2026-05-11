@@ -66,6 +66,33 @@ monthly premium goes onto the agent's MRR), **REJECT** (offer dies, lead
 stays in pipeline), or **HANG_UP** (lead is permanently lost — and may
 even request the "do not call" list, which blocks future contact).
 
+A typical successful interaction looks like this:
+
+```
+search CRM            → 3 leads returned                       [1 min]
+get lead 0042         → Maria, 38, $48k income                 [1 min]
+                        family_protector archetype
+                        $180/mo budget, latent need 0.74
+start call            → conversation begins                    [1 min]
+  agent:  "Hi Maria, this is Sam from State Insurance..."
+  buyer:  "What's the catch here?"
+  agent:  "No catch. With three kids at home, you'd want term
+           coverage that protects them through their college years."
+quote plan            → TERM, $400k coverage → $156/mo         [1 min]
+  agent:  "I'd recommend a 20-year term at $156 a month."
+propose offer         → buyer ACCEPT                           [4 min]
+  buyer:  "Premium fits my budget and covers the kids — let's
+           move forward."
+end call                                                       [1 min]
+
+Total: $156 MRR locked in, 9 minutes used of the 60-minute budget.
+```
+
+The agent has to do this for every lead in its pipeline, against a real
+LLM that can refuse, request something different, hang up, or block the
+agent from the DNC list — and every tool call subtracts from a shared
+time budget that doesn't refill.
+
 The reward shape is composite:
 
 ```
@@ -98,22 +125,35 @@ each stage warm-started from the previous stage's checkpoint via Prime's
 
 ![Curriculum stages: each warm-started from the previous](charts/training_economics.png)
 
-The transfer was striking. Each new stage started its very first
-warm-started training step at ≥70% of ceiling on the harder
-distribution, because the model had already learned the workflow on the
-easier one:
+The from-scratch stage (v41) is where almost all the work happens. It
+takes about 200 training steps to climb from cold-start chaos to
+near-ceiling mastery on the 2-lead distribution. The model has to learn
+the schema for every tool call, learn when to start a call, learn the
+sales workflow (search → call → quote → propose), and learn how to
+adjust to buyer responses. The invalid-action rate per episode crashes
+from ~6 to ~0.5 as the model figures out the schema. Reward and
+conversion rate climb together.
 
-| Stage | Leads | Reward at warm-start step | % of ceiling |
+![v41 from-scratch detail: reward, conversion rate, invalid actions](charts/v41_detail.png)
+
+Once the model has mastered 2 leads, mastery on 4 leads is essentially
+free — and so on up the curriculum:
+
+![Curriculum learning curve across all 4 stages](charts/curriculum_learning.png)
+
+Numerically, each stage's *first* warm-started training step lands at:
+
+| Stage | Leads | Reward at warm-start step 0 | % of ceiling |
 |---|---:|---:|---:|
 | v41 (from scratch) | 2 | 0.021 | 1.5% |
-| v42 (warm-started) | 4 | 1.359 | **95.7%** |
-| v43 (warm-started) | 8 | 1.267 | **89.3%** |
-| v44 (warm-started) | 20 | 1.013 | **71.2%** |
+| v42 (warm-started from v41 step 195) | 4 | 1.359 | **95.7%** |
+| v43 (warm-started from v42 step 215) | 8 | 1.267 | **89.3%** |
+| v44 (warm-started from v43 step 215) | 20 | 1.013 | **71.2%** |
 
-In other words: once the model had mastered 2 leads, mastery at 4 was
-free. From 4 to 8 was almost free. The 8 → 20 jump was the hardest
-transfer because it's 2.5× larger, but the model still landed at 78%
-per-lead conversion right out of the gate.
+Going from 2 → 4 → 8 leads each cost roughly nothing — the model
+generalized those scale jumps for free. The 8 → 20 jump (2.5× larger)
+was the hardest transfer, but the model still landed at 78%
+per-lead conversion *on the very first step* of seeing 20-lead episodes.
 
 We stopped at 20 leads. The trainer was bottlenecking on long episodes
 (~2 hours per training step on 20-lead trajectories), and we wanted to
@@ -141,6 +181,19 @@ The trained model:
 - **Converts 35% of contacts** (17.5× more)
 - **Captures 41% of available MRR** (205× more)
 - **Proposes 5 offers/ep on average**, almost twice as many as untrained
+
+A few other things worth flagging:
+
+**Turn efficiency.** Untrained: 128 turns per episode for 1 sale =
+roughly **0.008 conversions per turn**. Trained-default: 163 turns per
+episode for 17.5 sales = **0.108 conversions per turn**. The trained
+model converts at **13× the per-turn rate** of the untrained baseline.
+Each line of dialog actually does work.
+
+**DNC compliance.** The "do-not-call" violations metric is near-zero
+across every cell — the model never gets blocked for being pushy. This
+is a quiet win for the reward shape (we made DNC violations a hard
+penalty, and the model respects it consistently).
 
 The composite reward goes from **−0.035 → 0.490** — i.e., from below the
 floor to roughly a third of the way to ceiling, on a task **2.5× larger

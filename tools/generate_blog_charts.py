@@ -248,13 +248,165 @@ def chart_training_curriculum() -> None:
     print(f"wrote {OUT / 'training_economics.png'}")
 
 
+def _fetch_training_metrics() -> dict:
+    """Fetch per-step metrics from each curriculum stage's run.
+
+    Caches to /tmp/training_metrics.json so subsequent regenerations don't
+    re-hit Prime's API.
+    """
+    cache = Path("/tmp/training_metrics.json")
+    if cache.exists():
+        return json.loads(cache.read_text())
+    import subprocess
+    runs = {
+        "v41": ("xx2cxrbn2snmjw0a6a8of1en", 2),
+        "v42": ("y9umdopamm1mgqo6tenl9ode", 4),
+        "v43": ("hzenawf8ji4k8a5gubvqqv19", 8),
+        "v44": ("lxgzps32bpj5cp3olulbljwz", 20),
+    }
+    out = {}
+    for name, (run_id, leads) in runs.items():
+        result = subprocess.run(
+            ["prime", "rl", "metrics", run_id],
+            capture_output=True, text=True, timeout=60,
+        )
+        records = json.loads(result.stdout).get("metrics", []) if result.returncode == 0 else []
+        out[name] = {"leads": leads, "records": records}
+    cache.write_text(json.dumps(out, default=str))
+    return out
+
+
+def chart_curriculum_learning() -> None:
+    """Learning curve across all 4 curriculum stages, color-coded by lead count.
+
+    The key visual story: v41 climbs from ~0 to ceiling over 200 steps; each
+    subsequent stage warm-starts near the previous ceiling and holds.
+    """
+    data = _fetch_training_metrics()
+    stages = [
+        ("v41", 2, ACCENT),
+        ("v42", 4, COOL),
+        ("v43", 8, GOOD),
+        ("v44", 20, WARN),
+    ]
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+
+    cum_offset = 0  # cumulative x position
+    transitions = []
+    for name, leads, color in stages:
+        records = data[name]["records"]
+        if not records:
+            continue
+        # Sort by step
+        records = sorted(records, key=lambda r: int(r.get("step", 0)))
+        # Use stage-local x: how many steps have elapsed within this stage's run
+        steps_local = list(range(len(records)))
+        rewards = [r.get("reward/all/mean", 0) for r in records]
+        # Plot in cumulative space
+        x = [cum_offset + i for i in steps_local]
+        ax.plot(x, rewards, color=color, linewidth=2.2, label=f"{name}: {leads} leads",
+                marker="o" if len(records) < 10 else None, markersize=5)
+        ax.fill_between(x, rewards, alpha=0.08, color=color)
+        # Stage label
+        mid_x = cum_offset + len(records) / 2
+        if name == "v41":
+            label_x = cum_offset + len(records) - 25  # right side for v41
+            label_y = max(rewards) - 0.05
+        else:
+            label_x = mid_x
+            label_y = rewards[-1] + 0.04
+        ax.text(label_x, label_y, f"{leads} leads",
+                fontsize=10.5, fontweight="bold", color=color, ha="center")
+        # Track transition
+        cum_offset += len(records)
+        transitions.append((cum_offset, name))
+
+    # Draw vertical dashed lines at curriculum transitions
+    for x, name in transitions[:-1]:  # skip last (run end, not transition)
+        ax.axvline(x, color="#9CA3AF", linestyle="--", linewidth=1, alpha=0.6, zorder=0)
+
+    # Graduation threshold (95% of ceiling)
+    ax.axhline(1.35, color="#6B7280", linestyle=":", linewidth=1.2, alpha=0.7, zorder=0)
+    ax.text(5, 1.37, "graduation threshold (95% of 1.42 ceiling)",
+            fontsize=9, color="#6B7280", style="italic")
+
+    ax.set_xlabel("Training step (cumulative across stages)", fontsize=11)
+    ax.set_ylabel("Composite reward (ceiling = 1.42)", fontsize=11)
+    ax.set_ylim(-0.1, 1.55)
+    ax.set_xlim(-5, cum_offset + 5)
+
+    fig.suptitle(
+        "Curriculum learning curve",
+        fontsize=15, fontweight="bold", color=INK, x=0.08, y=0.96, ha="left",
+    )
+    fig.text(
+        0.08, 0.89,
+        "v41 climbs from-scratch (200 steps to ceiling). Each subsequent stage warm-starts near\n"
+        "the previous ceiling and drops only modestly when leads increase — the curriculum transfers.",
+        fontsize=10.5, color="#4B5563",
+    )
+    ax.legend(loc="lower right", frameon=False, fontsize=10)
+    plt.subplots_adjust(top=0.77, bottom=0.10, left=0.07, right=0.97)
+    plt.savefig(OUT / "curriculum_learning.png")
+    plt.close()
+    print(f"wrote {OUT / 'curriculum_learning.png'}")
+
+
+def chart_v41_detail() -> None:
+    """Zoom on v41 (the from-scratch stage) showing reward + conv/lead + invalid."""
+    data = _fetch_training_metrics()
+    records = sorted(data["v41"]["records"], key=lambda r: int(r.get("step", 0)))
+    steps = [int(r["step"]) for r in records]
+    reward = [r.get("reward/all/mean", 0) for r in records]
+    conv = [r.get("metrics/salesbench/salesbench/metric_conversions", 0) / 2 * 100 for r in records]  # 2 leads max
+    inv = [r.get("metrics/salesbench/salesbench/metric_invalid_actions", 0) for r in records]
+
+    fig, ax1 = plt.subplots(figsize=(11, 6.5))
+    ax2 = ax1.twinx()
+
+    l1, = ax1.plot(steps, reward, color=ACCENT, linewidth=2.2, label="Reward")
+    l2, = ax1.plot(steps, [c / 100 for c in conv], color=GOOD, linewidth=2, alpha=0.9, label="Conv rate / lead")
+    l3, = ax2.plot(steps, inv, color=PINK, linewidth=1.8, alpha=0.85, label="Invalid actions / ep", linestyle="--")
+
+    ax1.set_xlabel("Training step", fontsize=11)
+    ax1.set_ylabel("Reward  /  conversion fraction", color=INK, fontsize=11)
+    ax1.set_ylim(-0.1, 1.55)
+    ax1.axhline(1.42, color="#9CA3AF", linestyle=":", linewidth=1, alpha=0.5)
+    ax1.text(5, 1.44, "ceiling", fontsize=9, color="#6B7280", style="italic")
+
+    ax2.set_ylabel("Invalid actions per episode", color=PINK, fontsize=11)
+    ax2.set_ylim(0, max(inv) * 1.15)
+    ax2.spines["top"].set_visible(False)
+    ax2.tick_params(axis="y", labelcolor=PINK)
+    ax2.grid(False)
+
+    fig.suptitle(
+        "v41 (from scratch, 2 leads): the foundational 200-step training run",
+        fontsize=15, fontweight="bold", color=INK, x=0.07, y=0.965, ha="left",
+    )
+    fig.text(
+        0.07, 0.90,
+        "Reward and conversion rate climb together; invalid actions per episode crash from ~6 to ~0.5\n"
+        "as the model learns the tool-call schema. All subsequent stages warm-start from here.",
+        fontsize=10.5, color="#4B5563",
+    )
+    ax1.legend(handles=[l1, l2, l3], loc="lower right", frameon=False, fontsize=10)
+    plt.subplots_adjust(top=0.81, bottom=0.10, left=0.07, right=0.92)
+    plt.savefig(OUT / "v41_detail.png")
+    plt.close()
+    print(f"wrote {OUT / 'v41_detail.png'}")
+
+
 def main() -> None:
     results = load_results()
     chart_hero(results)
     chart_buyer_ablation(results)
     chart_metric_breakdown(results)
     chart_training_curriculum()
-    print(f"\nAll 4 charts written to {OUT}")
+    chart_curriculum_learning()
+    chart_v41_detail()
+    print(f"\nAll 6 charts written to {OUT}")
 
 
 if __name__ == "__main__":
