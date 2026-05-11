@@ -205,10 +205,10 @@ def chart_metric_breakdown(results: dict[str, dict]) -> None:
 def chart_training_curriculum() -> None:
     """Curriculum economics chart: lead count + cost per stage."""
     stages = [
-        ("v41", 2, "~$15", 24, "near-perfect (99% ceiling)"),
-        ("v42", 4, "~$30", 6, "mastered (98% ceiling)"),
-        ("v43", 8, "~$15", 1, "mastered in 2 steps"),
-        ("v44", 20, "~$80", 4, "78% conv/lead at warm-start"),
+        ("from scratch\n(2 leads)", 2, "~$15", 24, "near-perfect (99% ceiling)"),
+        ("warm-start\n(4 leads)", 4, "~$30", 6, "mastered (98% ceiling)"),
+        ("warm-start\n(8 leads)", 8, "~$15", 1, "mastered in 2 steps"),
+        ("warm-start\n(20 leads)", 20, "~$80", 4, "78% conv/lead at warm-start"),
     ]
     fig, ax = plt.subplots(figsize=(10, 4.5))
     x = list(range(len(stages)))
@@ -239,7 +239,7 @@ def chart_training_curriculum() -> None:
     )
     fig.text(
         0.08, 0.88,
-        "Total training: ~$140 in compute, ~35 hours wall clock from v41 start to v44 stop.",
+        "Total training: ~$140 in compute, ~35 hours of wall clock from first run to last.",
         fontsize=10.5, color="#4B5563",
     )
     plt.subplots_adjust(top=0.78, bottom=0.13, left=0.08, right=0.97)
@@ -305,7 +305,7 @@ def chart_curriculum_learning() -> None:
         rewards = [r.get("reward/all/mean", 0) for r in records]
         # Plot in cumulative space
         x = [cum_offset + i for i in steps_local]
-        ax.plot(x, rewards, color=color, linewidth=2.2, label=f"{name}: {leads} leads",
+        ax.plot(x, rewards, color=color, linewidth=2.2, label=f"{leads} leads / episode",
                 marker="o" if len(records) < 10 else None, markersize=5)
         ax.fill_between(x, rewards, alpha=0.08, color=color)
         # Stage label
@@ -342,8 +342,8 @@ def chart_curriculum_learning() -> None:
     )
     fig.text(
         0.08, 0.89,
-        "v41 climbs from-scratch (200 steps to ceiling). Each subsequent stage warm-starts near\n"
-        "the previous ceiling and drops only modestly when leads increase — the curriculum transfers.",
+        "The from-scratch stage climbs over 200 steps to ceiling. Each subsequent stage warm-starts\n"
+        "near the previous ceiling and only drops modestly when leads increase. The curriculum transfers.",
         fontsize=10.5, color="#4B5563",
     )
     ax.legend(loc="lower right", frameon=False, fontsize=10)
@@ -382,7 +382,7 @@ def chart_v41_detail() -> None:
     ax2.grid(False)
 
     fig.suptitle(
-        "v41 (from scratch, 2 leads): the foundational 200-step training run",
+        "From-scratch training, 2 leads per episode (200 steps)",
         fontsize=15, fontweight="bold", color=INK, x=0.07, y=0.965, ha="left",
     )
     fig.text(
@@ -393,9 +393,9 @@ def chart_v41_detail() -> None:
     )
     ax1.legend(handles=[l1, l2, l3], loc="lower right", frameon=False, fontsize=10)
     plt.subplots_adjust(top=0.81, bottom=0.10, left=0.07, right=0.92)
-    plt.savefig(OUT / "v41_detail.png")
+    plt.savefig(OUT / "from_scratch_detail.png")
     plt.close()
-    print(f"wrote {OUT / 'v41_detail.png'}")
+    print(f"wrote {OUT / 'from_scratch_detail.png'}")
 
 
 def main() -> None:
