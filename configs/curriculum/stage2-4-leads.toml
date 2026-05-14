@@ -1,0 +1,32 @@
+# Curriculum stage 2: warm-start to 4 leads / 2h episodes.
+#
+# Before running, set CHECKPOINT_ID below to the latest checkpoint from
+# stage 1 (look it up with `prime rl checkpoints <stage1-run-id>`), or
+# use `tools/train_curriculum.sh` which fills it in automatically.
+
+model = "Qwen/Qwen3.5-2B"
+checkpoint_id = "<STAGE1_CKPT_ID>"
+max_steps = 220
+batch_size = 128
+rollouts_per_example = 32
+oversampling_factor = 2.5
+max_async_level = 1
+learning_rate = 1e-5
+lora_alpha = 64
+env_file = ["../../secrets.env"]
+
+[sampling]
+max_tokens = 4096
+temperature = 1.0
+
+[[env]]
+id = "salesbench/salesbench"
+args = { split = "train", num_examples = 2048, num_leads = 4, total_hours = 2, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+
+[buffer]
+online_difficulty_filtering = true
+seed = 2026
+
+[checkpoints]
+interval = 5
+keep_cloud = 5

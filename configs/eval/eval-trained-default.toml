@@ -25,7 +25,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "eval", num_examples = 128, num_leads = 50, total_hours = 50, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000, buyer_prompt_variant = "default" }
+args = { split = "eval", num_examples = 128, num_leads = 100, total_hours = 50, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000, buyer_prompt_variant = "default" }
 
 [buffer]
 online_difficulty_filtering = false

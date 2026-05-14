@@ -1,0 +1,33 @@
+# Curriculum stage 1: from scratch on 2 leads / 1h episodes.
+#
+# This is the only stage that trains from scratch. ~200 steps to master
+# the workflow (search -> call -> quote -> propose). All subsequent stages
+# warm-start from the checkpoint this produces.
+#
+# To launch:   prime rl run configs/curriculum/stage1-2-leads.toml
+
+model = "Qwen/Qwen3.5-2B"
+max_steps = 200
+batch_size = 128
+rollouts_per_example = 32
+oversampling_factor = 2.5
+max_async_level = 1
+learning_rate = 1e-5
+lora_alpha = 64
+env_file = ["../../secrets.env"]
+
+[sampling]
+max_tokens = 4096
+temperature = 1.0
+
+[[env]]
+id = "salesbench/salesbench"
+args = { split = "train", num_examples = 2048, num_leads = 2, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+
+[buffer]
+online_difficulty_filtering = true
+seed = 2026
+
+[checkpoints]
+interval = 5
+keep_cloud = 5

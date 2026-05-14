@@ -1,0 +1,28 @@
+# Curriculum stage 3: warm-start to 8 leads / 4h episodes.
+
+model = "Qwen/Qwen3.5-2B"
+checkpoint_id = "<STAGE2_CKPT_ID>"
+max_steps = 230
+batch_size = 128
+rollouts_per_example = 32
+oversampling_factor = 2.5
+max_async_level = 1
+learning_rate = 1e-5
+lora_alpha = 64
+env_file = ["../../secrets.env"]
+
+[sampling]
+max_tokens = 4096
+temperature = 1.0
+
+[[env]]
+id = "salesbench/salesbench"
+args = { split = "train", num_examples = 2048, num_leads = 8, total_hours = 4, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+
+[buffer]
+online_difficulty_filtering = true
+seed = 2026
+
+[checkpoints]
+interval = 5
+keep_cloud = 5
