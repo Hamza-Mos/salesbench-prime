@@ -1,4 +1,4 @@
-# SalesBench: Training a 2B Model to Run a Sales Pipeline
+# SalesBench: The Long-Horizon Agent-to-Agent Eval
 
 *A long-horizon RL environment where a small model learns to manage an insurance sales pipeline against an LLM buyer.*
 
