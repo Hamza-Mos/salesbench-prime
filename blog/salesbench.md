@@ -1,6 +1,6 @@
 # SalesBench: The Long-Horizon Agent-to-Agent Eval
 
-TL;DR: SalesBench is an open reinforcement-learning (RL) environment for training and evaluating sales agents. The agent works a pipeline of simulated insurance leads, talks to a buyer LLM on each call, and is scored by revenue closed rather than by an LLM judge. I trained a small open model on it through a short curriculum, then ran a held-out eval at a harder scale than it ever trained on. It vastly outperforms the untrained base, and the gap actually widens as the task gets harder.
+TL;DR: SalesBench is an open reinforcement-learning (RL) environment for training and evaluating sales agents. The agent works a pipeline of simulated insurance leads, talks to a buyer LLM on each call, and is scored by revenue closed rather than by an LLM judge. I trained a small open model on it through a short curriculum, then ran a held-out eval at a harder scale than it ever trained on. It vastly outperforms the untrained base, and the gap actually widens as the task gets harder. The environment, eval, and training configs are all released.
 
 * * *
 
@@ -9,6 +9,8 @@ TL;DR: SalesBench is an open reinforcement-learning (RL) environment for trainin
 Many agent benchmarks isolate one hard part of the problem. Vending Bench is long-horizon and stateful, but the customers are scripted. tau-bench has an LLM user, but the episodes are short. Sotopia has two LLMs in a social setting, but it is single-session and graded by a judge model.
 
 SalesBench combines the pieces that matter for operational agents: long-horizon work, persistent state, an LLM counterparty, constrained resources, and a verifiable outcome. The training runs are included to establish that the environment provides a real learning signal. The primary artifact is the eval.
+
+That distinction matters. Real-world agents (sales, support, scheduling, ops) share the same shape: long episodes, persistent state, a counterparty pushing back, and a verifiable outcome. SalesBench is one concrete instance of that shape. Most existing benchmarks reward narrow task completion or rely on judge models to score; production agents don't get either luxury.
 
 The agent is a seller. It gets a pipeline of leads and a fixed number of simulated hours. Each lead has a generated profile (income, household, monthly budget) plus latent traits like need, trust, and a personality the buyer LLM uses to play that prospect. A buyer LLM, `gpt-5-mini`, plays the prospect during the call. I used `gpt-5-mini` because it produces stable structured outputs and realistic objections. When the seller proposes an offer, the buyer returns a structured decision: accept, reject, or hang up.
 
