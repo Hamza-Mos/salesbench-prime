@@ -2,7 +2,7 @@
 
 *A long-horizon RL environment where a small model learns to manage an insurance sales pipeline against an LLM buyer.*
 
-TL;DR: SalesBench is an open RL environment for training and evaluating sales agents. The agent manages a pipeline of simulated insurance leads, interacts with a buyer model during calls, and is scored by monthly recurring revenue closed rather than by an LLM judge. I trained Qwen3.5-2B through a 2, 4, 8, 20 lead curriculum. On a held-out 100-lead eval, the untrained model converts 0.3% of leads. The trained model converts 18.5% with the default buyer, a 61.7x lift. Across four buyer styles, it converts between 7.9% and 19.7%.
+TL;DR: SalesBench is an open RL environment for training and evaluating sales agents. The agent works a pipeline of simulated insurance leads, talks to a buyer model on each call, and is scored by revenue closed rather than by an LLM judge. I trained a small open model on it through a short curriculum, then ran a held-out eval at a harder scale than the model ever trained on. It vastly outperforms the untrained base, and the gap actually widens as the task gets harder.
 
 * * *
 
