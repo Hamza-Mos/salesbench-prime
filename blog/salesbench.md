@@ -1,6 +1,6 @@
 # SalesBench: The Long-Horizon Agent-to-Agent Eval
 
-TL;DR: SalesBench is an open RL environment for training and evaluating sales agents. The agent works a pipeline of simulated insurance leads, talks to a buyer LLM on each call, and is scored by revenue closed rather than by an LLM judge. I trained a small open model on it through a short curriculum, then ran a held-out eval at a harder scale than it ever trained on. It vastly outperforms the untrained base, and the gap actually widens as the task gets harder.
+TL;DR: SalesBench is an open reinforcement-learning (RL) environment for training and evaluating sales agents. The agent works a pipeline of simulated insurance leads, talks to a buyer LLM on each call, and is scored by revenue closed rather than by an LLM judge. I trained a small open model on it through a short curriculum, then ran a held-out eval at a harder scale than it ever trained on. It vastly outperforms the untrained base, and the gap actually widens as the task gets harder.
 
 * * *
 
@@ -53,7 +53,7 @@ reward = 1.00 * revenue_mrr / max_achievable_mrr
        - 0.005 * invalid_actions
 ```
 
-MRR dominates. Conversion rate and budget utilization shape the policy. The completion bonus is intentionally small because earlier reward versions overpaid for clean termination, and the model learned to end episodes instead of selling.
+MRR (monthly recurring revenue) dominates. Conversion rate and budget utilization shape the policy. The completion bonus is intentionally small because earlier reward versions overpaid for clean termination, and the model learned to end episodes instead of selling.
 
 The environment provides a learning signal because the model is rewarded for closing revenue, not for sounding persuasive.
 
@@ -165,7 +165,7 @@ At 50 leads, the trained model converts 20.6x more leads than the base. At 100 l
 
 The gap grows as the eval gets harder. When the pipeline doubles from 50 to 100 leads, the trained model's conversion rate drops from 26.8% to 18.5%. The untrained base drops from 1.3% to 0.3%. The trained policy degrades under scale, but the base model collapses much faster.
 
-DNC violations stayed near zero across the eval. At 100 leads, the trained model also improved per-turn closing rate by roughly 35x. The base averages about 0.003 conversions per dialog turn. The trained model averages about 0.112.
+Do-not-call (DNC) violations stayed near zero across the eval. At 100 leads, the trained model also improved per-turn closing rate by roughly 35x. The base averages about 0.003 conversions per dialog turn. The trained model averages about 0.112.
 
 ![Per-lead conversion at 50 leads vs 100 leads, side by side. The lift over the untrained base widens with scale.](charts/scaling_50_vs_100.png)
 
@@ -185,6 +185,12 @@ These results do not prove the policy is fully robust to every buyer model. They
 * * *
 
 ### Discussion
+
+Three things worth holding onto from this experiment:
+
+- **A small model can learn the task and generalize across scale.** Training on 20-lead episodes is enough to hold up on a 100-lead eval.
+- **Reward design is more fragile than it looks.** Almost any shaping reward becomes a floor trap if the model can game it without selling.
+- **Context summarization is a prerequisite, not a nice-to-have.** Without it, most 100-lead episodes error out before they finish.
 
 The main result is straightforward: a 2B model can learn a long-horizon sales workflow well enough to generalize from 20-lead training episodes to 100-lead eval episodes.
 
