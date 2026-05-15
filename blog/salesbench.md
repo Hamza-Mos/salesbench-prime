@@ -1,7 +1,5 @@
 # SalesBench: The Long-Horizon Agent-to-Agent Eval
 
-*A long-horizon RL environment where a small model learns to manage an insurance sales pipeline against an LLM buyer.*
-
 TL;DR: SalesBench is an open RL environment for training and evaluating sales agents. The agent works a pipeline of simulated insurance leads, talks to a buyer model on each call, and is scored by revenue closed rather than by an LLM judge. I trained a small open model on it through a short curriculum, then ran a held-out eval at a harder scale than the model ever trained on. It vastly outperforms the untrained base, and the gap actually widens as the task gets harder.
 
 * * *
@@ -12,11 +10,11 @@ Many agent benchmarks isolate one hard part of the problem. Vending Bench is lon
 
 SalesBench combines the pieces that matter for operational agents: long-horizon work, persistent state, an LLM counterparty, constrained resources, and a verifiable outcome. The training runs are included to establish that the environment provides a real learning signal. The primary artifact is the eval.
 
-The agent is a seller. It gets a pipeline of leads and a fixed number of simulated hours. Each lead has income, budget, household, temperature, latent need, trust level, price sensitivity, and a buyer archetype. A buyer LLM, `gpt-5-mini`, plays the prospect during the call. I used `gpt-5-mini` because it produces stable structured outputs and realistic objections. When the seller proposes an offer, the buyer returns a structured decision: accept, reject, or hang up.
+The agent is a seller. It gets a pipeline of leads and a fixed number of simulated hours. Each lead has a generated profile (income, household, monthly budget) plus latent traits like need, trust, and a personality the buyer LLM uses to play that prospect. A buyer LLM, `gpt-5-mini`, plays the prospect during the call. I used `gpt-5-mini` because it produces stable structured outputs and realistic objections. When the seller proposes an offer, the buyer returns a structured decision: accept, reject, or hang up.
 
 The buyer model does not grade the seller. It only simulates the counterparty. The score comes from environment state: a sale either closes or it does not. The eval tests whether a model can use tools correctly, keep state over a long episode, manage a finite budget, respond to another model, and optimize a measurable business outcome.
 
-![Per-lead conversion at 100 leads. Untrained baseline, then trained against 4 buyer styles.](charts/hero_comparison.png)
+![Per-lead conversion on the 100-lead eval, untrained vs trained.](charts/hero_comparison.png)
 
 * * *
 
@@ -88,6 +86,16 @@ tool  -> 10 leads returned, sorted by need and budget
 
 agent -> calling_start_call({"lead_id": "lead_0042"})
 tool  -> call started
+
+agent -> "Hi Maria, this is Sam from State Insurance. I see
+          you've got two kids, and I want to make sure they're
+          covered if anything happens to you."
+
+buyer -> "What's the catch?"
+
+agent -> "No catch. With your income and a 20-year term, we
+          can lock in coverage that's there until they finish
+          college."
 
 agent -> products_quote_plan({
            "lead_id": "lead_0042",
@@ -223,4 +231,4 @@ By default, the eval script runs `Qwen/Qwen3.5-2B`. You can pass any model strin
 
 Full code: [github.com/Hamza-Mos/salesbench-prime](https://github.com/Hamza-Mos/salesbench-prime).
 
-Thanks to the Prime Intellect team for the training infrastructure and the free credits.
+Thanks to the Prime Intellect team for the training infrastructure and the mentorship.
