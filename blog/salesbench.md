@@ -2,7 +2,7 @@
 
 *A long-horizon RL environment where a small model learns to manage an insurance sales pipeline against an LLM buyer.*
 
-TL;DR: SalesBench is an open RL environment for training and evaluating sales agents. The agent manages a pipeline of simulated insurance leads, interacts with a buyer model during calls, and is scored by monthly recurring revenue closed rather than by an LLM judge. I trained Qwen3.5-2B through a 2, 4, 8, 20 lead curriculum for about $140. On a held-out 100-lead eval, the untrained model converts 0.3% of leads. The trained model converts 18.5% with the default buyer, a 61.7x lift. Across four buyer styles, it converts between 7.9% and 19.7%.
+TL;DR: SalesBench is an open RL environment for training and evaluating sales agents. The agent manages a pipeline of simulated insurance leads, interacts with a buyer model during calls, and is scored by monthly recurring revenue closed rather than by an LLM judge. I trained Qwen3.5-2B through a 2, 4, 8, 20 lead curriculum. On a held-out 100-lead eval, the untrained model converts 0.3% of leads. The trained model converts 18.5% with the default buyer, a 61.7x lift. Across four buyer styles, it converts between 7.9% and 19.7%.
 
 * * *
 
@@ -12,7 +12,7 @@ Many agent benchmarks isolate one hard part of the problem. Vending Bench is lon
 
 SalesBench combines the pieces that matter for operational agents: long-horizon work, persistent state, an LLM counterparty, constrained resources, and a verifiable outcome. The training runs are included to establish that the environment provides a real learning signal. The primary artifact is the eval.
 
-The agent is a seller. It gets a pipeline of leads and a fixed number of simulated hours. Each lead has income, budget, household, temperature, latent need, trust level, price sensitivity, and a buyer archetype. A buyer LLM, `gpt-5-mini`, plays the prospect during the call. I used `gpt-5-mini` because it is cheap enough for many buyer calls, stable enough for structured outputs, and strong enough to produce realistic objections. When the seller proposes an offer, the buyer returns a structured decision: accept, reject, or hang up.
+The agent is a seller. It gets a pipeline of leads and a fixed number of simulated hours. Each lead has income, budget, household, temperature, latent need, trust level, price sensitivity, and a buyer archetype. A buyer LLM, `gpt-5-mini`, plays the prospect during the call. I used `gpt-5-mini` because it produces stable structured outputs and realistic objections. When the seller proposes an offer, the buyer returns a structured decision: accept, reject, or hang up.
 
 The buyer model does not grade the seller. It only simulates the counterparty. The score comes from environment state: a sale either closes or it does not. The eval tests whether a model can use tools correctly, keep state over a long episode, manage a finite budget, respond to another model, and optimize a measurable business outcome.
 
@@ -124,11 +124,11 @@ I trained Qwen3.5-2B with GRPO through a curriculum: 2 leads, then 4, 8, and 20.
 
 The first stage did most of the work. Starting from scratch on 2 leads, the model needed about 200 steps to go from broken tool use to near-ceiling performance. Invalid actions dropped from roughly 6 per episode to about 0.5.
 
-After that, scaling was cheap. The 4-lead stage started at 95.7% of ceiling, the 8-lead stage at 89.3%, and the 20-lead stage at 71.2%. The workflow transferred. Later stages mainly trained prioritization rather than tool use from scratch.
+After that, scaling was fast. The 4-lead stage started at 95.7% of ceiling, the 8-lead stage at 89.3%, and the 20-lead stage at 71.2%. The workflow transferred. Later stages mainly trained prioritization rather than tool use from scratch.
 
 ![Curriculum learning curve across all 4 stages, cumulative training steps](charts/curriculum_learning.png)
 
-Total training cost was about $140 on Prime Intellect, over roughly 35 hours of wall clock.
+Training took roughly 35 hours of wall clock on Prime Intellect.
 
 I stopped training at 20 leads intentionally. The stronger test is whether a policy trained on smaller pipelines generalizes to larger held-out pipelines.
 
@@ -178,7 +178,7 @@ These results do not prove the policy is fully robust to every buyer model. They
 
 ### Discussion
 
-The main result is straightforward: a 2B model trained for about $140 can learn a long-horizon sales workflow well enough to generalize from 20-lead training episodes to 100-lead eval episodes.
+The main result is straightforward: a 2B model can learn a long-horizon sales workflow well enough to generalize from 20-lead training episodes to 100-lead eval episodes.
 
 The base model mostly fails at the interface. It calls tools out of order, invents arguments, skips quotes, and tries to set the buyer outcome itself. The trained model learns the mechanics first, then starts using the time budget as a real constraint.
 
