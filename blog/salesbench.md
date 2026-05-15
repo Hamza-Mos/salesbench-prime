@@ -204,6 +204,8 @@ The eval also needs context management. At 100 leads, dialog histories get long.
 
 SalesBench is useful because it forces the agent to solve the operational parts of the problem: use tools correctly, keep state, manage a budget, interact with another model, and optimize a measurable outcome over a long horizon.
 
+The pattern is portable: use the LLM as the counterparty, keep the reward grounded in environment state, and evaluate on long-horizon operational outcomes. SalesBench is one instance of it.
+
 * * *
 
 ### Run It
