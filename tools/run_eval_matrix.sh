@@ -1,130 +1,80 @@
 #!/usr/bin/env bash
-# Launch the full eval matrix for the SalesBench publication.
+# Launch the full SalesBench eval matrix via `prime eval run`.
+#
+# Five cells: untrained baseline (base Qwen3.5-2B) + trained model against
+# 4 buyer personalities (default / skeptical / impulsive / analytical).
+# Each cell: 128 episodes, 100 leads, 50 simulated hours, fixed seed.
 #
 # Usage:
-#   bash tools/run_eval_matrix.sh <V44_RUN_ID> <V44_CKPT_STEP>
+#   bash tools/run_eval_matrix.sh <ADAPTER_ID>
 #
 # Example:
-#   bash tools/run_eval_matrix.sh nig0ix7jiznmshmq9w37wd8j 195
+#   bash tools/run_eval_matrix.sh gjgpwgdb5sh7y2d6epmveh23
 #
-# What this does:
-#   1. For each cell in configs/eval/, generate a per-cell config with the
-#      v44 checkpoint ID + correct max_steps filled in.
-#   2. Launch each cell as a `prime rl run` (sequentially by default;
-#      pass --parallel to launch all at once).
-#   3. Write run IDs to tools/results/eval_matrix_runs.txt for the
-#      aggregator to consume.
-#
-# After all cells complete, run:
-#   python tools/aggregate_eval_results.py tools/results/eval_matrix_runs.txt
+# Find your adapter ID with `prime deployments list -o json` (it's the
+# READY adapter whose rft_run_id matches your trained-curriculum run).
+# Deploy it first with `prime deployments create <ADAPTER_ID>`.
 
 set -euo pipefail
 
-V44_RUN_ID="${1:-}"
-V44_CKPT_STEP="${2:-}"
-PARALLEL="${3:-sequential}"  # "parallel" or "sequential"
-
-if [ -z "$V44_RUN_ID" ] || [ -z "$V44_CKPT_STEP" ]; then
-    echo "Usage: bash tools/run_eval_matrix.sh <V44_RUN_ID> <V44_CKPT_STEP> [parallel|sequential]"
+ADAPTER_ID="${1:-}"
+if [ -z "$ADAPTER_ID" ]; then
+    echo "Usage: bash tools/run_eval_matrix.sh <ADAPTER_ID>"
     echo
-    echo "Get the v44 checkpoint id (latest READY checkpoint) via:"
-    echo "  prime rl checkpoints <v44-run-id>"
-    echo
-    echo "V44_RUN_ID is the run ID; V44_CKPT_STEP is the step number of the"
-    echo "checkpoint to evaluate (e.g. 295). The script computes max_steps =$V44_CKPT_STEP + 1."
+    echo "Find your adapter:  prime deployments list -o json"
+    echo "Deploy:             prime deployments create <ADAPTER_ID>"
     exit 1
 fi
 
-# Step 1: get the checkpoint ID for the chosen step
-echo "Looking up checkpoint at step $V44_CKPT_STEP for run $V44_RUN_ID..."
-CKPT_TABLE=$(prime rl checkpoints "$V44_RUN_ID" 2>&1)
-echo "$CKPT_TABLE"
-echo
-CKPT_ID=$(echo "$CKPT_TABLE" | awk -v step="$V44_CKPT_STEP" '
-    /^│/ && $4 == step { print $2; exit }
-')
+mkdir -p tools/results/prime-eval
+TRAINED_MODEL="Qwen/Qwen3.5-2B:${ADAPTER_ID}"
+BASE_MODEL="Qwen/Qwen3.5-2B"
+COMMON_ARGS='"split":"eval","num_examples":128,"num_leads":100,"total_hours":50,"context_rewrite_threshold":0.85,"context_keep_recent":10,"context_max_seq_len":16000'
 
-if [ -z "$CKPT_ID" ]; then
-    echo "ERROR: could not find checkpoint at step $V44_CKPT_STEP for run $V44_RUN_ID"
-    echo "Verify the step exists in the table above and is READY."
-    exit 1
-fi
-echo "Found checkpoint $CKPT_ID at step $V44_CKPT_STEP"
-echo
-
-MAX_STEPS=$((V44_CKPT_STEP + 1))
-echo "Will set max_steps = $MAX_STEPS for trained-cell evals"
-echo
-
-# Step 2: prepare per-cell configs
-WORK_DIR=$(mktemp -d)
-echo "Working dir: $WORK_DIR"
-
-declare -a CELLS=(
-    "eval-untrained-default"
-    "eval-trained-default"
-    "eval-trained-skeptical"
-    "eval-trained-impulsive"
-    "eval-trained-analytical"
-)
-
-SECRETS_ABS="$(pwd)/secrets.env"
-for cell in "${CELLS[@]}"; do
-    src="configs/eval/${cell}.toml"
-    dst="$WORK_DIR/${cell}.toml"
-    if [[ "$cell" == "eval-untrained-default" ]]; then
-        # No checkpoint; just rewrite env_file to absolute path
-        sed -e "s|env_file = \[\"../../secrets.env\"\]|env_file = [\"$SECRETS_ABS\"]|" \
-            "$src" > "$dst"
-    else
-        # Replace checkpoint + max_steps placeholders + abs env_file path
-        sed -e "s|<V44_CKPT_ID>|$CKPT_ID|" \
-            -e "s|max_steps = 999|max_steps = $MAX_STEPS|" \
-            -e "s|env_file = \[\"../../secrets.env\"\]|env_file = [\"$SECRETS_ABS\"]|" \
-            "$src" > "$dst"
-    fi
-done
-echo "Generated 5 per-cell configs in $WORK_DIR"
-echo
-
-# Step 3: launch each cell
-mkdir -p tools/results
-RESULTS_FILE="tools/results/eval_matrix_runs.txt"
-> "$RESULTS_FILE"  # truncate
-
-launch_one() {
-    local cell="$1"
-    local cfg="$WORK_DIR/${cell}.toml"
-    echo "=== Launching $cell ==="
-    local output
-    output=$(prime rl run "$cfg" 2>&1 | tee /dev/stderr)
-    local run_id
-    run_id=$(echo "$output" | grep -oE 'training/[a-z0-9]+' | head -1 | cut -d'/' -f2)
-    if [ -n "$run_id" ]; then
-        echo "$cell $run_id" >> "$RESULTS_FILE"
-        echo "→ $cell run_id: $run_id"
-    else
-        echo "WARN: failed to extract run_id for $cell"
-    fi
-    echo
+run_cell() {
+    local name="$1" model="$2" buyer="$3" stagger="$4"
+    local log="tools/results/prime-eval/cell-${name}.log"
+    echo "=== launching $name ==="
+    (
+        sleep "$stagger"
+        prime eval run salesbench \
+            -m "$model" \
+            -n 128 -r 1 \
+            --max-concurrent 16 \
+            --save-results \
+            --env-args "{${COMMON_ARGS},\"buyer_prompt_variant\":\"${buyer}\"}" \
+            > "$log" 2>&1
+    ) &
+    echo "  pid=$! log=$log"
 }
 
-if [ "$PARALLEL" == "parallel" ]; then
-    echo "Launching all 5 cells in PARALLEL..."
-    for cell in "${CELLS[@]}"; do
-        launch_one "$cell" &
-    done
-    wait
-else
-    echo "Launching cells SEQUENTIALLY..."
-    for cell in "${CELLS[@]}"; do
-        launch_one "$cell"
-    done
-fi
+# Stagger launches by 8s to avoid the multiprocessing race on parallel
+# `prime eval run` startup that can hit module-loading conflicts.
+run_cell "untrained-default"  "$BASE_MODEL"    "default"    0
+run_cell "trained-default"    "$TRAINED_MODEL" "default"    8
+run_cell "trained-skeptical"  "$TRAINED_MODEL" "skeptical"  16
+run_cell "trained-impulsive"  "$TRAINED_MODEL" "impulsive"  24
+run_cell "trained-analytical" "$TRAINED_MODEL" "analytical" 32
 
 echo
-echo "All cells launched. Run IDs written to $RESULTS_FILE:"
-cat "$RESULTS_FILE"
+echo "All 5 cells launched in parallel (staggered start)."
+echo "Each cell runs locally as a Python process and calls Prime Inference."
 echo
-echo "Wait for all runs to complete (status COMPLETED), then run:"
-echo "  python tools/aggregate_eval_results.py $RESULTS_FILE"
+echo "Monitor progress with:"
+echo "  tail -f tools/results/prime-eval/cell-*.log"
+echo
+echo "Wait for all to finish (~1-2 hours wall clock)..."
+echo
+wait
+echo
+echo "=================================="
+echo "All cells complete. Headline numbers:"
+echo "=================================="
+printf "%-25s %10s %10s %10s\n" "Cell" "Reward" "Conv/lead" "MRR"
+for cell in untrained-default trained-default trained-skeptical trained-impulsive trained-analytical; do
+    log="tools/results/prime-eval/cell-${cell}.log"
+    rew=$(grep "^reward: avg" "$log" 2>/dev/null | head -1 | grep -oE "avg - [-0-9.]+" | awk '{print $3}')
+    conv=$(grep "^reward_conversion_rate: avg" "$log" 2>/dev/null | head -1 | grep -oE "avg - [-0-9.]+" | awk '{print $3}')
+    mrr=$(grep "^reward_revenue_mrr: avg" "$log" 2>/dev/null | head -1 | grep -oE "avg - [-0-9.]+" | awk '{print $3}')
+    printf "%-25s %10s %10s %10s\n" "$cell" "${rew:-FAIL}" "${conv:-FAIL}" "${mrr:-FAIL}"
+done

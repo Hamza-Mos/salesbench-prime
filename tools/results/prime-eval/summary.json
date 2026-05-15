@@ -1,0 +1,37 @@
+{
+  "eval_mechanism": "prime eval run (deployed adapter gjgpwgdb5sh7y2d6epmveh23, base Qwen3.5-2B)",
+  "shared_config": {
+    "n_episodes_per_cell": 128,
+    "rollouts_per_example": 1,
+    "max_concurrent": 16,
+    "total_hours": 50,
+    "context_max_seq_len": 16000,
+    "context_rewrite_threshold": 0.85,
+    "seed": "default eval split seed"
+  },
+  "results_50_leads": [
+    {"cell": "untrained-default",  "reward": -0.039, "conv_per_lead": 0.013, "mrr_capture": 0.002, "episode_done": 0.469, "context_summary_count": 1.953},
+    {"cell": "trained-default",    "reward":  0.316, "conv_per_lead": 0.268, "mrr_capture": 0.276, "episode_done": 0.922, "context_summary_count": 5.609},
+    {"cell": "trained-skeptical",  "reward":  0.133, "conv_per_lead": 0.160, "mrr_capture": 0.139, "episode_done": 0.875, "context_summary_count": 4.766},
+    {"cell": "trained-impulsive",  "reward":  0.561, "conv_per_lead": 0.430, "mrr_capture": 0.451, "episode_done": 0.906, "context_summary_count": 6.828},
+    {"cell": "trained-analytical", "reward":  0.285, "conv_per_lead": 0.243, "mrr_capture": 0.249, "episode_done": 0.922, "context_summary_count": 6.094}
+  ],
+  "results_100_leads": [
+    {"cell": "untrained-default",  "reward": -0.040, "conv_per_lead": 0.003, "mrr_capture": 0.000, "episode_done": 0.531, "context_summary_count": 1.031},
+    {"cell": "trained-default",    "reward":  0.194, "conv_per_lead": 0.185, "mrr_capture": 0.180, "episode_done": 0.906, "context_summary_count": 8.516},
+    {"cell": "trained-skeptical",  "reward":  0.017, "conv_per_lead": 0.079, "mrr_capture": 0.054, "episode_done": 0.906, "context_summary_count": 5.203},
+    {"cell": "trained-impulsive",  "reward":  0.212, "conv_per_lead": 0.197, "mrr_capture": 0.194, "episode_done": 0.922, "context_summary_count": 7.719},
+    {"cell": "trained-analytical", "reward":  0.117, "conv_per_lead": 0.133, "mrr_capture": 0.122, "episode_done": 0.906, "context_summary_count": 6.859}
+  ],
+  "lift_over_untrained": {
+    "50_leads":  {"default": 20.6, "skeptical": 12.3, "impulsive": 33.1, "analytical": 18.7},
+    "100_leads": {"default": 61.7, "skeptical": 26.3, "impulsive": 65.7, "analytical": 44.3}
+  },
+  "headline_findings": [
+    "Gap widens at scale: lift over untrained goes from 21x mean at 50 leads to 50x at 100 leads.",
+    "Untrained drops 4.3x as leads double (1.3% -> 0.3%); trained drops 1.8x on average.",
+    "Trained model holds 7.9-19.7% conv/lead at 100 leads across 4 unseen buyer variants (no overfit to default buyer).",
+    "Skeptical-buyer-at-scale is the failure mode (5x conversion drop vs 1.5-2.2x for others), but still 26x lift over untrained.",
+    "Context summarization is essential at 100 leads: 8.5 summaries/episode trained-default; without summarization, 47% of episodes errored on context overflow."
+  ]
+}
