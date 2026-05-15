@@ -1,12 +1,9 @@
-# Eval cell: TRAINED Qwen3.5-2B (v44 ckpt), ANALYTICAL buyer.
-# Tests whether the trained model handles a buyer that ignores
-# personality/rapport and only looks at numbers. Buyer reasoning cites
-# specific affordability/coverage ratios. Similar accept rate to default
-# but qualitatively different decision-making.
-# Replace <V44_CKPT_ID> + override max_steps at launch.
+# Fallback cloud eval cell: trained Qwen3.5-2B, analytical buyer.
+# Canonical blog numbers come from `prime eval run` via tools/run_eval_matrix.sh.
+# Replace <TRAINED_CKPT_ID> and override max_steps before launch.
 
 model = "Qwen/Qwen3.5-2B"
-checkpoint_id = "<V44_CKPT_ID>"
+checkpoint_id = "<TRAINED_CKPT_ID>"
 max_steps = 999
 batch_size = 128
 rollouts_per_example = 32
@@ -34,5 +31,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench-eval"
-name = "eval-trained-analytical-50leads"
+name = "eval-trained-analytical-100leads"
 entity = "hamza-mos-university-of-waterloo"

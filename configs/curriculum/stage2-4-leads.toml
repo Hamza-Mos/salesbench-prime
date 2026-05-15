@@ -1,8 +1,7 @@
 # Curriculum stage 2: warm-start to 4 leads / 2h episodes.
 #
-# Before running, set CHECKPOINT_ID below to the latest checkpoint from
-# stage 1 (look it up with `prime rl checkpoints <stage1-run-id>`), or
-# use `tools/train_curriculum.sh` which fills it in automatically.
+# Before running, set checkpoint_id below to the latest checkpoint from
+# stage 1. Look it up with `prime rl checkpoints <stage1-run-id>`.
 
 model = "Qwen/Qwen3.5-2B"
 checkpoint_id = "<STAGE1_CKPT_ID>"

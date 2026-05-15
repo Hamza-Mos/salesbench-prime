@@ -1,16 +1,11 @@
-# Eval cell: TRAINED Qwen3.5-2B (v44 ckpt), default buyer.
-# Headline trained number for the blog. Compare directly to
-# eval-untrained-default.toml to compute the generalization claim:
-# "trained on 20 leads, evaluated on 50, untrained baseline X → trained Y."
-#
-# IMPORTANT: replace <V44_CKPT_ID> with the actual checkpoint ID after
-# v44 finishes (get via: prime rl checkpoints <v44-run-id>).
-# max_steps must be > checkpoint step (per program.md lesson #71).
-# Use the highest checkpoint step, set max_steps = ckpt_step + 1.
+# Fallback cloud eval cell: trained Qwen3.5-2B, default buyer.
+# Canonical blog numbers come from `prime eval run` via tools/run_eval_matrix.sh.
+# If using this fallback config, replace <TRAINED_CKPT_ID> with the trained
+# checkpoint ID and set max_steps greater than the checkpoint step.
 
 model = "Qwen/Qwen3.5-2B"
-checkpoint_id = "<V44_CKPT_ID>"
-max_steps = 999  # placeholder; must be > v44 ckpt step. Override at launch.
+checkpoint_id = "<TRAINED_CKPT_ID>"
+max_steps = 999  # placeholder; must be > checkpoint step. Override at launch.
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 1.0
@@ -37,5 +32,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench-eval"
-name = "eval-trained-default-50leads"
+name = "eval-trained-default-100leads"
 entity = "hamza-mos-university-of-waterloo"

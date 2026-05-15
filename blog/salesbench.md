@@ -1,20 +1,30 @@
-# I Trained a 2B Model to Sell Insurance. Here's What It Learned.
+# SalesBench: Training a 2B Model to Run a Sales Pipeline
 
-*A long-horizon, agent-to-agent RL environment, plus an ablation that suggests the model learned the task instead of just gaming the buyer.*
+*A long-horizon RL environment where a small model learns to manage an insurance sales pipeline against an LLM buyer.*
 
-**TL;DR:** SalesBench is an open RL environment where a model runs an insurance sales pipeline against an LLM buyer, scored by monthly recurring revenue closed. I trained Qwen3.5-2B through a 2 -> 4 -> 8 -> 20 lead curriculum (~$140 of compute) and evaluated it on held-out 50-lead and 100-lead pipelines against four different buyer personalities. The trained model converts **8-20% of leads at 100 leads** vs the untrained base's 0.3% — a **26x to 66x lift over baseline**. The most interesting result: doubling the eval scale (50 -> 100 leads) drops the trained model's per-lead conversion ~2x but drops the untrained baseline ~4x, so **the lift over the untrained baseline grows from ~21x to ~50x as the task gets harder**.
+TL;DR: SalesBench is an open RL environment for training and evaluating sales agents. The agent manages a pipeline of simulated insurance leads, interacts with a buyer model during calls, and is scored by monthly recurring revenue closed rather than by an LLM judge. I trained Qwen3.5-2B through a 2, 4, 8, 20 lead curriculum for about $140. On a held-out 100-lead eval, the untrained model converts 0.3% of leads. The trained model converts 18.5% with the default buyer, a 61.7x lift. Across four buyer styles, it converts between 7.9% and 19.7%.
 
-Most agent benchmarks are either long-horizon or agent-to-agent. I wanted both.
+* * *
 
-Vending Bench is long-horizon and stateful, but the customers are scripted. tau-bench has an LLM user, but the episodes are short. Sotopia has two LLMs in a social setting, but it is single-session and graded by a judge model. SalesBench is my attempt at the missing piece: long-horizon, stateful work against an LLM counterparty, scored by a verifiable business outcome. I think of it primarily as an eval; the training runs are there to show the environment has a real learning signal.
+### Motivation
 
-The setup is simple. The seller gets N leads and a fixed number of simulated hours. Each lead has income, budget, household, temperature, latent need, trust level, price sensitivity, and a buyer archetype. A buyer LLM (gpt-5-mini) plays the prospect during the call and returns a structured decision when the seller proposes an offer. The reward comes from runtime state, not an LLM judge score. A sale either closes or it does not.
+Many agent benchmarks isolate one hard part of the problem. Vending Bench is long-horizon and stateful, but the customers are scripted. tau-bench has an LLM user, but the episodes are short. Sotopia has two LLMs in a social setting, but it is single-session and graded by a judge model.
 
-![Per-lead conversion at 100 leads, untrained baseline + 4 trained buyer variants](charts/hero_comparison.png)
+SalesBench combines the pieces that matter for operational agents: long-horizon work, persistent state, an LLM counterparty, constrained resources, and a verifiable outcome. The training runs are included to establish that the environment provides a real learning signal. The primary artifact is the eval.
 
-## The Environment
+The agent is a seller. It gets a pipeline of leads and a fixed number of simulated hours. Each lead has income, budget, household, temperature, latent need, trust level, price sensitivity, and a buyer archetype. A buyer LLM, `gpt-5-mini`, plays the prospect during the call. I used `gpt-5-mini` because it is cheap enough for many buyer calls, stable enough for structured outputs, and strong enough to produce realistic objections. When the seller proposes an offer, the buyer returns a structured decision: accept, reject, or hang up.
 
-An episode gives the agent a pipeline, a time budget, and tools:
+The buyer model does not grade the seller. It only simulates the counterparty. The score comes from environment state: a sale either closes or it does not. The eval tests whether a model can use tools correctly, keep state over a long episode, manage a finite budget, respond to another model, and optimize a measurable business outcome.
+
+![Per-lead conversion at 100 leads. Untrained baseline, then trained against 4 buyer styles.](charts/hero_comparison.png)
+
+* * *
+
+### Environment
+
+One episode is one simulated sales shift. The agent starts with a fresh lead pipeline, a fixed time budget, and zero closed revenue. The episode ends when time runs out, the pipeline is exhausted, or the agent hits too many invalid actions.
+
+The agent has a small set of tools:
 
 ```text
 crm_search_leads             1 min
@@ -26,9 +36,15 @@ calling_end_call             1 min
 calendar_schedule_callback   1 min
 ```
 
-The 4-minute offer cost is the dominant constraint. Repeated bad offers to one lead burn budget the agent could have spent on the rest of the pipeline. The workflow the model has to learn is: search the CRM, start one call, discover need, quote a plan, propose the offer, move on.
+Time is the main constraint. Proposing an offer costs 4 minutes. Repeated bad offers to one lead burn the same budget the agent could have spent working the rest of the pipeline.
 
-The reward is mostly monthly recurring revenue:
+The intended workflow is simple:
+
+Search the CRM. Start one call. Discover need. Quote a plan. Propose the offer. Move on.
+
+Under the hood, the runtime is deterministic. Tool calls mutate state and consume minutes. The buyer LLM enters only when the agent talks to a lead or proposes an offer. This keeps the simulator separate from the reward function.
+
+The reward is mostly revenue:
 
 ```text
 reward = 1.00 * revenue_mrr / max_achievable_mrr
@@ -39,13 +55,15 @@ reward = 1.00 * revenue_mrr / max_achievable_mrr
        - 0.005 * invalid_actions
 ```
 
-MRR dominates. Conversion rate and budget utilization shape behavior. The completion bonus is tiny on purpose: an earlier version paid more for clean termination and the model learned to finish episodes without selling. Stacking the four weighted reward terms during the from-scratch run shows the same hierarchy in the gradient:
+MRR dominates. Conversion rate and budget utilization shape the policy. The completion bonus is intentionally small because earlier reward versions overpaid for clean termination, and the model learned to end episodes instead of selling.
 
-![Weighted reward components over training: MRR dominates, budget utilization second, completion bonus intentionally tiny](charts/reward_components.png)
+The environment provides a learning signal because the model is rewarded for closing revenue, not for sounding persuasive.
 
-## What Training Changed
+* * *
 
-The base model does not understand the environment. On one sampled rollout, its first action was:
+### Training Signal
+
+The base model did not understand the environment. On one sampled rollout, its first action was:
 
 ```text
 agent -> calling_propose_offer({
@@ -60,9 +78,9 @@ agent -> calling_propose_offer({
 tool  -> "got an unexpected keyword argument 'lead_id'"
 ```
 
-No CRM search, no call started, no quote, invalid argument name, and the buyer outcome stuffed into `next_step` as if it were the agent's to set. Across three sampled episodes, the base model made 43 offer attempts, 0 quote calls, and one accidental conversion.
+There was no CRM search, no call started, no quote, and the argument schema was wrong. The model also put `"ACCEPT"` into `next_step`, as if the buyer decision were something the seller could set. Across three sampled episodes, the base model made 43 offer attempts, 0 quote calls, and got one accidental conversion.
 
-The trained model looks different:
+After training, the behavior changed:
 
 ```text
 agent -> crm_search_leads()
@@ -70,12 +88,6 @@ tool  -> 10 leads returned, sorted by need and budget
 
 agent -> calling_start_call({"lead_id": "lead_0042"})
 tool  -> call started
-
-agent -> "Hi Maria, this is Sam from State Insurance.
-          I see you've got two kids, and I want to make sure
-          they're covered if anything happens to you."
-
-buyer -> "What's the catch?"
 
 agent -> products_quote_plan({
            "lead_id": "lead_0042",
@@ -98,129 +110,117 @@ buyer -> ACCEPT. "Premium fits my budget and covers the kids."
 tool  -> +$156 MRR
 ```
 
-That is the whole result in miniature. The trained agent learned the tool schema, the call sequence, the quote-before-propose constraint, and a basic sales policy: match the plan to the lead, keep the premium inside budget, close, move on.
-
-The buyer is not a simple accept/reject oracle. Real rejections include reasons:
+The trained model learned the tool schema, the quote-before-propose constraint, and the basic sales loop. It also learned triage. Buyer rejections include reasons:
 
 > "Premium fits my budget, but you didn't confirm whether a medical exam or any other conditions are required. I need those details and more policy terms before I can commit, so I'll pass for now."
 
-That creates the tradeoff. The agent can spend another 4 minutes trying a revised offer, or move to the next lead. With 100 leads and a fixed budget, that triage is the game.
+The agent can spend another 4 minutes trying a revised offer, or it can move to the next lead. With 100 leads and a fixed budget, that choice is central to the task.
 
-You can also watch the workflow itself emerge over training. Per-tool call counts per episode tell the story: the model starts by spamming CRM searches and almost never starting a call. By the end, the search-call-quote-propose cycle has balanced into something that looks like a sales pipeline.
+The workflow also appears in tool usage. Early in training, the model mostly spams CRM searches. By the end, search-call-quote-propose becomes the steady loop.
 
 ![Tool calls per episode over training: CRM-search spam collapses, quote and propose climb to a steady cadence](charts/tool_call_evolution.png)
 
-## Curriculum Training
-
-I trained Qwen3.5-2B with GRPO through a four-stage curriculum: 2 leads, then 4, 8, and 20. Each stage warm-started from the previous checkpoint.
-
-![Curriculum stages: cost, wall clock, and lead count for each warm-started stage](charts/training_economics.png)
+I trained Qwen3.5-2B with GRPO through a curriculum: 2 leads, then 4, 8, and 20. Each stage warm-started from the previous checkpoint.
 
 The first stage did most of the work. Starting from scratch on 2 leads, the model needed about 200 steps to go from broken tool use to near-ceiling performance. Invalid actions dropped from roughly 6 per episode to about 0.5.
 
-![From-scratch run: reward and conversion rate climb together as invalid actions per episode crash from ~6 to ~0.5](charts/from_scratch_detail.png)
-
-After that, scaling was cheap. The 4-lead stage started at 95.7% of ceiling, the 8-lead stage at 89.3%, the 20-lead stage at 71.2%. Warm-starting carried the workflow forward; each new stage was mostly about triage, not relearning the tools.
+After that, scaling was cheap. The 4-lead stage started at 95.7% of ceiling, the 8-lead stage at 89.3%, and the 20-lead stage at 71.2%. The workflow transferred. Later stages mainly trained prioritization rather than tool use from scratch.
 
 ![Curriculum learning curve across all 4 stages, cumulative training steps](charts/curriculum_learning.png)
 
-Total training cost was about $140 on Prime Intellect, over roughly 35 hours of wall clock. I stopped at 20 leads because long episodes were becoming slow, and evaluating on a larger distribution is the cleaner generalization test anyway.
+Total training cost was about $140 on Prime Intellect, over roughly 35 hours of wall clock.
 
-## The Eval
+I stopped training at 20 leads intentionally. The stronger test is whether a policy trained on smaller pipelines generalizes to larger held-out pipelines.
 
-Setup: 128 episodes per cell, fixed seed, 50 simulated hours of budget, ran via `prime eval run` against the deployed v44 LoRA adapter (and against the untrained base Qwen3.5-2B for the baseline). Two eval scales: **50 leads per episode** (matched to training scale) and **100 leads per episode** (5x training scale, harder generalization test).
+* * *
 
-Headline numbers, untrained vs trained, default buyer:
+### Evaluation
 
-| Metric | 50 leads, untrained | 50 leads, trained | 100 leads, untrained | 100 leads, trained |
+I evaluated the trained adapter and the untrained base with `prime eval run`. Each cell used 128 held-out episodes. Each episode is an independent simulated sales shift with a new generated pipeline from the eval split and 50 simulated hours of budget.
+
+I ran two scales:
+
+50 leads per episode, which is 2.5x the largest training stage.
+
+100 leads per episode, which is 5x the largest training stage.
+
+Here is the before/after on the default buyer:
+
+| Metric | 50 leads, base | 50 leads, trained | 100 leads, base | 100 leads, trained |
 |---|---:|---:|---:|---:|
 | Reward | -0.039 | 0.316 | -0.040 | 0.194 |
-| Conv per lead | **1.3%** | **26.8%** | **0.3%** | **18.5%** |
+| Conversion per lead | **1.3%** | **26.8%** | **0.3%** | **18.5%** |
 | MRR capture | 0.2% | 27.6% | 0.0% | 18.0% |
-| Episodes completed cleanly | 47% | 92% | 53% | 91% |
+| Episodes completed | 47% | 92% | 53% | 91% |
 
-The lift over the untrained baseline at 50 leads is 20.6x. At 100 leads it's 61.7x. Same model. Same buyer. Just doubling the pipeline grows the gap by ~3x. The mechanism is simple: when the task gets harder, the trained model degrades modestly and the untrained base falls off a cliff.
+At 50 leads, the trained model converts 20.6x more leads than the base. At 100 leads, it converts 61.7x more.
 
-![Per-lead conversion at 50 leads vs 100 leads, untrained baseline + 4 trained variants](charts/scaling_50_vs_100.png)
+The gap grows as the eval gets harder. When the pipeline doubles from 50 to 100 leads, the trained model's conversion rate drops from 26.8% to 18.5%. The untrained base drops from 1.3% to 0.3%. The trained policy degrades under scale, but the base model collapses much faster.
 
-DNC violations stayed near-zero across every cell at both scales (worst cell: 1.6% per-episode rate — one accidental violation per ~64 episodes). Per-turn closing rate at 100 leads improved by roughly 35x: the untrained base model averages ~0.003 conversions per turn of dialog; the trained model averages ~0.112.
+DNC violations stayed near zero across the eval. At 100 leads, the trained model also improved per-turn closing rate by roughly 35x. The base averages about 0.003 conversions per dialog turn. The trained model averages about 0.112.
 
-## Buyer-Prompt Ablation
+![Per-lead conversion at 50 leads vs 100 leads, side by side. The lift over the untrained base widens with scale.](charts/scaling_50_vs_100.png)
 
-The concern with LLM-vs-LLM training is that the seller might learn the buyer simulator instead of the task. Vending Bench showed a version of this: the trained agent nudged the customer model into purchases unrelated to running the business.
+I also ran the trained model against three buyer prompts it never saw during training: skeptical, impulsive, and analytical. This is not the main result, but it checks an important failure mode. When training against a user simulator, an agent can learn quirks of the simulator instead of the task.
 
-To check for it here, I wrote three additional buyer prompts. The trained seller only ever saw the default buyer:
+At 100 leads, conversion stayed between 7.9% and 19.7% across all four buyer styles. The analytical buyer ignores pitch quality and accepts only on affordability, coverage fit, and plan fit. The model still converted 13.3%.
 
-- **default:** balanced, personality-driven, archetype-aware.
-- **skeptical:** default-distrust, rejects borderline offers.
-- **impulsive:** gut-decision buyer with hard floors against bad offers.
-- **analytical:** pure numerical filter, ignoring pitch quality.
+| Buyer | 100L conv/lead | Lift vs base |
+|---|---:|---:|
+| default | 18.5% | 61.7x |
+| skeptical | 7.9% | 26.3x |
+| impulsive | 19.7% | 65.7x |
+| analytical | 13.3% | 44.3x |
 
-Validated locally on 60 lead-offer pairs (240 buyer calls): 90-point spread in acceptance rate, zero parse errors. Then I ran the trained seller against all four buyers, at both eval scales:
+These results do not prove the policy is fully robust to every buyer model. They do show that the learned behavior transfers across meaningfully different buyer prompts, including a numerical buyer that ignores conversational style.
 
-![Trained model against 4 buyer personalities at the 100-lead eval](charts/buyer_ablation.png)
+* * *
 
-| Buyer | 50L conv/lead | 100L conv/lead | 50L lift | 100L lift |
-|---|---:|---:|---:|---:|
-| default | 26.8% | 18.5% | 20.6x | **61.7x** |
-| skeptical | 16.0% | 7.9% | 12.3x | **26.3x** |
-| impulsive | 43.0% | 19.7% | 33.1x | **65.7x** |
-| analytical | 24.3% | 13.3% | 18.7x | **44.3x** |
+### Discussion
 
-At 100 leads, conversion stays in an 8-20% band across all four buyers — a 2.5x spread. No buyer drives the model to zero. **Every buyer variant shows a larger lift over baseline at 100 leads than at 50.**
+The main result is straightforward: a 2B model trained for about $140 can learn a long-horizon sales workflow well enough to generalize from 20-lead training episodes to 100-lead eval episodes.
 
-![Conversion lift over untrained baseline at 50 leads vs 100 leads, by buyer variant](charts/lift_widening.png)
+The base model mostly fails at the interface. It calls tools out of order, invents arguments, skips quotes, and tries to set the buyer outcome itself. The trained model learns the mechanics first, then starts using the time budget as a real constraint.
 
-A few patterns worth pulling out:
+The reward design mattered. If the reward pays too much for clean termination, the model learns to finish without selling. If it pays for quote coverage after quote-before-propose is already enforced, it creates a floor trap. The final reward is deliberately simple: revenue first, a little conversion shaping, a little budget shaping, and a tiny completion bonus.
 
-**Skeptical-buyer-at-scale is the failure mode.** At 50 leads, skeptical's per-lead conversion was 16.0%; at 100 leads it falls to 7.9% (the largest absolute drop of any cell). Each rejection forces a retry, retries eat budget, and the model can't recover at scale when both pressures stack. Even so, it's still 26x over baseline.
+The eval also needs context management. At 100 leads, dialog histories get long. Without deterministic context summarization, Qwen3.5-2B's 64k context is not enough. An early eval attempt without those env args had a 47% per-episode error rate. With summarization on and concurrency reduced, that dropped under 2%.
 
-**Impulsive holds up best at scale.** It's the easiest buyer (no rejections to recover from), so the model just spends its budget contacting more leads. Highest absolute conversion at 100 leads (19.7%) and the largest lift (65.7x).
+SalesBench is useful because it forces the agent to solve the operational parts of the problem: use tools correctly, keep state, manage a budget, interact with another model, and optimize a measurable outcome over a long horizon.
 
-**Analytical is the cleanest methodological check.** It ignores pitch quality entirely — accepts or rejects on affordability, coverage fit, and plan fit alone. The model still converts 13.3% at 100 leads (44.3x lift), which means the policy is picking offers whose *numbers* work, not gaming conversational style.
+* * *
 
-The combined evidence: the model isn't gaming gpt-5-mini's defaults. It's solving the actual sales triage problem, and that solution holds up across buyer variants and across scale.
-
-One smaller observation: at 100 leads, buyer-LLM calls per episode converge to ~85 across all four variants — episode wall clock is capped by the time budget rather than by buyer pickiness. The model spends its allowance contacting more leads regardless of how individual prospects respond. Offer counts spread more widely (27 for impulsive, 47 for skeptical), because rejection forces retries.
-
-![Buyer LLM calls per episode and offers proposed per episode, by buyer variant](charts/buyer_workload.png)
-
-## Takeaway
-
-A 2B-parameter model, trained for ~$140 of compute on episodes of up to 20 leads, runs a 100-lead sales pipeline and lands 8-20% per-lead conversion across four buyer personalities. The untrained base lands 0.3%. The relative lift over baseline grows from ~21x at 50 leads to ~50x at 100 leads, because the trained model degrades modestly under harder evals while the base falls off a cliff.
-
-Two methodological points are worth making explicit. First, the buyer-prompt ablation does what it's supposed to: the trained seller holds across four buyer styles it never trained against, including a pure-numerical filter that ignores pitch quality entirely. Second, context summarization is essential at this scale — Qwen3.5-2B's 64k context wouldn't survive 100-lead dialog histories without it. An early run that omitted the context-summary env-args (and used double the inference concurrency) saw a 47% per-episode error rate from a mix of context overflow and API capacity hits; with summarization on and concurrency halved, that dropped to under 2%.
-
-A few earlier reward shapes (a larger completion bonus, a redundant quote-coverage term) produced floor-trap collapses where the agent stopped trying to sell. The numbers above are with the reward stripped down to the form shown earlier in the post.
-
-## Run It
+### Run It
 
 ```bash
-# 1. Install Prime, log in, set your OpenAI key (used by the buyer LLM).
 pip install prime-cli
 prime login
-cp secrets.env.example secrets.env  # then edit OPENAI_API_KEY
-
-# 2. Install the SalesBench environment.
+cp secrets.env.example secrets.env  # add OPENAI_API_KEY
 prime env install salesbench/salesbench
 
-# 3. Train the curriculum. Each stage warm-starts from the previous one.
-#    Copy each stage's checkpoint id into the next stage's `checkpoint_id`.
-prime rl run configs/curriculum/stage1-2-leads.toml    # 2 leads, from scratch
-prime rl run configs/curriculum/stage2-4-leads.toml    # 4 leads, warm-start
-prime rl run configs/curriculum/stage3-8-leads.toml    # 8 leads, warm-start
-prime rl run configs/curriculum/stage4-20-leads.toml   # 20 leads, warm-start
+# Tiny smoke test. -n is episodes, -r is attempts per episode.
+prime eval run salesbench -m openai/gpt-5-mini -n 1 -r 1
 
-# 4. Find the trained adapter and deploy it as an inference endpoint.
-prime deployments list -o json | jq '.models[] | select(.rft_run_id=="<stage4-run-id>" and .status=="READY")'
+# 100-lead buyer-variant eval matrix.
+# No model arg means Qwen/Qwen3.5-2B.
+bash tools/run_eval_matrix.sh
+
+# Evaluate any other model, including a trained adapter.
+bash tools/run_eval_matrix.sh openai/gpt-5-mini
+bash tools/run_eval_matrix.sh Qwen/Qwen3.5-2B:<ADAPTER_ID>
+
+# Optional: train the curriculum.
+prime rl run configs/curriculum/stage1-2-leads.toml
+# Continue with stage2 through stage4 after copying each checkpoint_id
+# into the next config.
+
+# Find and deploy the trained adapter.
+prime deployments list -o json  # find ADAPTER_ID from the stage4 run
 prime deployments create <ADAPTER_ID>
-
-# 5. Run the eval matrix against the deployed adapter.
-bash tools/run_eval_matrix.sh <ADAPTER_ID>
 ```
 
-Buyer variants live in `environments/salesbench/policy.py` as `_DECISION_GUIDELINES_VARIANTS`. To eval against a different buyer, change `buyer_prompt_variant` in any `configs/eval/*.toml`.
+By default, the eval script runs `Qwen/Qwen3.5-2B`. You can pass any model string. To evaluate a trained adapter, use the base model plus adapter suffix form: `Qwen/Qwen3.5-2B:<ADAPTER_ID>`.
 
 Full code: [github.com/Hamza-Mos/salesbench-prime](https://github.com/Hamza-Mos/salesbench-prime).
 
-Thanks to the Prime Intellect team for the training infrastructure and the free credits!
+Thanks to the Prime Intellect team for the training infrastructure and the free credits.

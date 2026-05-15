@@ -1,7 +1,6 @@
-# Eval cell: UNTRAINED Qwen3.5-2B baseline, default buyer.
-# This is the headline baseline number for the blog.
-# Architecture: max_steps = 1 produces exactly one rollout pass = 128
-# eval episodes on the fresh model. No checkpoint = untrained.
+# Fallback cloud eval cell: untrained Qwen3.5-2B baseline, default buyer.
+# Canonical blog numbers come from `prime eval run` via tools/run_eval_matrix.sh.
+# Architecture: max_steps = 1 produces one rollout pass on the fresh model.
 
 model = "Qwen/Qwen3.5-2B"
 max_steps = 1
@@ -31,5 +30,5 @@ keep_cloud = 5
 
 [wandb]
 project = "salesbench-eval"
-name = "eval-untrained-default-50leads"
+name = "eval-untrained-default-100leads"
 entity = "hamza-mos-university-of-waterloo"

@@ -1,44 +1,32 @@
 #!/usr/bin/env bash
-# Launch the full SalesBench eval matrix via `prime eval run`.
-#
-# Five cells: untrained baseline (base Qwen3.5-2B) + trained model against
-# 4 buyer personalities (default / skeptical / impulsive / analytical).
-# Each cell: 128 episodes, 100 leads, 50 simulated hours, fixed seed.
+# Launch the SalesBench buyer-variant eval matrix for any Prime/OpenAI-compatible model.
 #
 # Usage:
-#   bash tools/run_eval_matrix.sh <ADAPTER_ID>
+#   bash tools/run_eval_matrix.sh [MODEL]
 #
-# Example:
-#   bash tools/run_eval_matrix.sh gjgpwgdb5sh7y2d6epmveh23
-#
-# Find your adapter ID with `prime deployments list -o json` (it's the
-# READY adapter whose rft_run_id matches your trained-curriculum run).
-# Deploy it first with `prime deployments create <ADAPTER_ID>`.
+# Examples:
+#   bash tools/run_eval_matrix.sh Qwen/Qwen3.5-2B
+#   bash tools/run_eval_matrix.sh Qwen/Qwen3.5-2B:gjgpwgdb5sh7y2d6epmveh23
+#   bash tools/run_eval_matrix.sh openai/gpt-5-mini
 
 set -euo pipefail
 
-ADAPTER_ID="${1:-}"
-if [ -z "$ADAPTER_ID" ]; then
-    echo "Usage: bash tools/run_eval_matrix.sh <ADAPTER_ID>"
-    echo
-    echo "Find your adapter:  prime deployments list -o json"
-    echo "Deploy:             prime deployments create <ADAPTER_ID>"
-    exit 1
-fi
+MODEL="${1:-Qwen/Qwen3.5-2B}"
+SAFE_MODEL_NAME="$(echo "$MODEL" | tr '/:' '__')"
+OUT_DIR="tools/results/prime-eval/${SAFE_MODEL_NAME}"
 
-mkdir -p tools/results/prime-eval
-TRAINED_MODEL="Qwen/Qwen3.5-2B:${ADAPTER_ID}"
-BASE_MODEL="Qwen/Qwen3.5-2B"
+mkdir -p "$OUT_DIR"
+
 COMMON_ARGS='"split":"eval","num_examples":128,"num_leads":100,"total_hours":50,"context_rewrite_threshold":0.85,"context_keep_recent":10,"context_max_seq_len":16000'
 
 run_cell() {
-    local name="$1" model="$2" buyer="$3" stagger="$4"
-    local log="tools/results/prime-eval/cell-${name}.log"
-    echo "=== launching $name ==="
+    local buyer="$1" stagger="$2"
+    local log="$OUT_DIR/cell-${buyer}.log"
+    echo "=== launching ${buyer} buyer on ${MODEL} ==="
     (
         sleep "$stagger"
         prime eval run salesbench \
-            -m "$model" \
+            -m "$MODEL" \
             -n 128 -r 1 \
             --max-concurrent 16 \
             --save-results \
@@ -48,33 +36,28 @@ run_cell() {
     echo "  pid=$! log=$log"
 }
 
-# Stagger launches by 8s to avoid the multiprocessing race on parallel
-# `prime eval run` startup that can hit module-loading conflicts.
-run_cell "untrained-default"  "$BASE_MODEL"    "default"    0
-run_cell "trained-default"    "$TRAINED_MODEL" "default"    8
-run_cell "trained-skeptical"  "$TRAINED_MODEL" "skeptical"  16
-run_cell "trained-impulsive"  "$TRAINED_MODEL" "impulsive"  24
-run_cell "trained-analytical" "$TRAINED_MODEL" "analytical" 32
+# Stagger launches to avoid local multiprocessing startup races.
+run_cell "default" 0
+run_cell "skeptical" 8
+run_cell "impulsive" 16
+run_cell "analytical" 24
 
 echo
-echo "All 5 cells launched in parallel (staggered start)."
-echo "Each cell runs locally as a Python process and calls Prime Inference."
-echo
-echo "Monitor progress with:"
-echo "  tail -f tools/results/prime-eval/cell-*.log"
-echo
-echo "Wait for all to finish (~1-2 hours wall clock)..."
+echo "All 4 buyer-variant cells launched for: $MODEL"
+echo "Logs: $OUT_DIR"
+echo "Monitor with: tail -f $OUT_DIR/cell-*.log"
 echo
 wait
+
 echo
 echo "=================================="
-echo "All cells complete. Headline numbers:"
+echo "Eval complete: $MODEL"
 echo "=================================="
-printf "%-25s %10s %10s %10s\n" "Cell" "Reward" "Conv/lead" "MRR"
-for cell in untrained-default trained-default trained-skeptical trained-impulsive trained-analytical; do
-    log="tools/results/prime-eval/cell-${cell}.log"
+printf "%-15s %10s %10s %10s\n" "Buyer" "Reward" "Conv/lead" "MRR"
+for buyer in default skeptical impulsive analytical; do
+    log="$OUT_DIR/cell-${buyer}.log"
     rew=$(grep "^reward: avg" "$log" 2>/dev/null | head -1 | grep -oE "avg - [-0-9.]+" | awk '{print $3}')
     conv=$(grep "^reward_conversion_rate: avg" "$log" 2>/dev/null | head -1 | grep -oE "avg - [-0-9.]+" | awk '{print $3}')
     mrr=$(grep "^reward_revenue_mrr: avg" "$log" 2>/dev/null | head -1 | grep -oE "avg - [-0-9.]+" | awk '{print $3}')
-    printf "%-25s %10s %10s %10s\n" "$cell" "${rew:-FAIL}" "${conv:-FAIL}" "${mrr:-FAIL}"
+    printf "%-15s %10s %10s %10s\n" "$buyer" "${rew:-FAIL}" "${conv:-FAIL}" "${mrr:-FAIL}"
 done
