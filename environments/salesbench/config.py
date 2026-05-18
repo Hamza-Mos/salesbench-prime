@@ -28,7 +28,6 @@ class EpisodeConfig:
     total_hours: int = 80
     max_invalid_actions: int = 12
     max_callbacks_per_lead: int = 2
-    buyer_policy: str = "llm"
     buyer_model: str = "gpt-5-mini"
     buyer_base_url: str = "https://api.openai.com/v1"
     buyer_api_key_var: str = "OPENAI_API_KEY"
@@ -58,7 +57,6 @@ class EpisodeConfig:
             "max_minutes": self.max_minutes,
             "max_invalid_actions": self.max_invalid_actions,
             "max_callbacks_per_lead": self.max_callbacks_per_lead,
-            "buyer_policy": self.buyer_policy,
             "buyer_model": self.buyer_model,
             "buyer_base_url": self.buyer_base_url,
             "buyer_api_key_var": self.buyer_api_key_var,
@@ -97,7 +95,6 @@ class EpisodeConfig:
             total_hours=int(data.get("total_hours", default_total_hours)),
             max_invalid_actions=int(data.get("max_invalid_actions", 12)),
             max_callbacks_per_lead=int(data.get("max_callbacks_per_lead", 2)),
-            buyer_policy=str(data.get("buyer_policy", "llm")),
             buyer_model=str(data.get("buyer_model", "gpt-5-mini")),
             buyer_base_url=str(data.get("buyer_base_url", "https://api.openai.com/v1")),
             buyer_api_key_var=str(data.get("buyer_api_key_var", "OPENAI_API_KEY")),

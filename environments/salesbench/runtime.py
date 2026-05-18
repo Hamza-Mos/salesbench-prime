@@ -442,7 +442,7 @@ class SalesEpisodeRuntime:
         """Apply a buyer decision to the active call.  Pure deterministic.
 
         Must be called after :meth:`record_offer` returned successfully
-        (not interrupted).  The buyer policy (LLM or rule-based) lives in the
+        (not interrupted).  The buyer LLM lives in the
         orchestrator layer — this method only mutates state.
         """
         if self.active_call is None:

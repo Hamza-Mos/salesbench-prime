@@ -27,7 +27,6 @@ from models import (
     RiskClass,
     RuntimeActionError,
 )
-from policy import RuleBasedBuyerPolicy
 from runtime import SalesEpisodeRuntime
 
 
@@ -41,7 +40,6 @@ def _make_config(**overrides) -> EpisodeConfig:
         "seed": 42,
         "num_leads": 10,
         "total_hours": 16,
-        "buyer_policy": "rule_based",
     }
     defaults.update(overrides)
     return EpisodeConfig(**defaults)
@@ -170,57 +168,6 @@ class TestCatalogPricing:
                 risk_class=RiskClass.STANDARD,
                 term_years=20,
             )
-
-
-# ---------------------------------------------------------------------------
-# TestRuleBasedBuyerPolicy
-# ---------------------------------------------------------------------------
-
-
-class TestRuleBasedBuyerPolicy:
-    def test_high_need_affordable_accepts(self):
-        policy = RuleBasedBuyerPolicy(seed=42)
-        lead = _make_test_lead(
-            latent_need=0.90,
-            trust_level=0.70,
-            price_sensitivity=0.30,
-            budget_monthly=200.0,
-        )
-        offer = Offer(
-            plan_type=PlanType.TERM,
-            coverage_amount=960_000,  # ~8x income
-            monthly_premium=60.0,  # Well under budget
-            next_step="Sign application",
-            term_years=20,
-        )
-        result = policy.evaluate_offer(lead=lead, offer=offer)
-        assert result.decision == BuyerDecision.ACCEPT
-
-    def test_unaffordable_rejects(self):
-        policy = RuleBasedBuyerPolicy(seed=42)
-        lead = _make_test_lead(
-            annual_income=60_000,
-            latent_need=0.80,
-            trust_level=0.60,
-            price_sensitivity=0.80,
-            budget_monthly=80.0,
-            max_calls=2,
-        )
-        offer = Offer(
-            plan_type=PlanType.WHOLE,
-            coverage_amount=500_000,
-            monthly_premium=500.0,  # Way over 6% of monthly income
-            next_step="Sign application",
-        )
-        result = policy.evaluate_offer(lead=lead, offer=offer)
-        assert result.decision == BuyerDecision.REJECT
-
-    def test_generate_response_returns_string(self):
-        policy = RuleBasedBuyerPolicy(seed=42)
-        lead = _make_test_lead()
-        response = policy.generate_response(lead=lead, agent_message="Hello!")
-        assert isinstance(response, str)
-        assert len(response) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -622,70 +569,6 @@ class TestTemperatureAndArchetype:
 
 
 # ---------------------------------------------------------------------------
-# TestRuleBasedPolicyTemperatureArchetype
-# ---------------------------------------------------------------------------
-
-
-class TestRuleBasedPolicyTemperatureArchetype:
-    def test_cold_lead_harder_to_close(self):
-        """A COLD lead should require a higher score to accept than a HOT lead."""
-        policy = RuleBasedBuyerPolicy(seed=42)
-        offer = Offer(
-            plan_type=PlanType.TERM,
-            coverage_amount=960_000,
-            monthly_premium=60.0,
-            next_step="Sign application",
-            term_years=20,
-        )
-        # Same lead attributes, different temperature
-        hot_lead = _make_test_lead(temperature=LeadTemperature.HOT)
-        cold_lead = _make_test_lead(temperature=LeadTemperature.COLD)
-
-        hot_result = policy.evaluate_offer(lead=hot_lead, offer=offer)
-        # Reset RNG for fair comparison
-        policy_2 = RuleBasedBuyerPolicy(seed=42)
-        cold_result = policy_2.evaluate_offer(lead=cold_lead, offer=offer)
-
-        # HOT should accept; COLD may not (or at least the scores should differ)
-        # Since the threshold is different, HOT should be more likely to accept
-        if hot_result.decision == BuyerDecision.ACCEPT:
-            # With same score, COLD has higher threshold so may reject
-            assert cold_result.decision in (BuyerDecision.ACCEPT, BuyerDecision.REJECT)
-
-    def test_budget_hawk_price_sensitivity(self):
-        """BUDGET_HAWK archetype should penalize price more heavily."""
-        policy_1 = RuleBasedBuyerPolicy(seed=42)
-        policy_2 = RuleBasedBuyerPolicy(seed=42)
-        offer = Offer(
-            plan_type=PlanType.TERM,
-            coverage_amount=960_000,
-            monthly_premium=80.0,
-            next_step="Sign application",
-            term_years=20,
-        )
-        analytical_lead = _make_test_lead(archetype=BuyerArchetype.ANALYTICAL)
-        budget_lead = _make_test_lead(archetype=BuyerArchetype.BUDGET_HAWK)
-
-        result_analytical = policy_1.evaluate_offer(lead=analytical_lead, offer=offer)
-        result_budget = policy_2.evaluate_offer(lead=budget_lead, offer=offer)
-
-        # BUDGET_HAWK has 1.4x price sensitivity multiplier
-        assert result_budget.score < result_analytical.score
-
-    def test_archetype_conditioned_responses(self):
-        """Archetype-specific response pool should be used."""
-        policy = RuleBasedBuyerPolicy(seed=42)
-        skeptic_lead = _make_test_lead(archetype=BuyerArchetype.SKEPTIC)
-        responses = set()
-        for seed in range(50):
-            p = RuleBasedBuyerPolicy(seed=seed)
-            responses.add(p.generate_response(lead=skeptic_lead, agent_message="Hi"))
-        # Should include at least one skeptic-specific response
-        skeptic_phrases = {"What's the catch here?", "Are there any hidden fees I should know about?"}
-        assert responses & skeptic_phrases
-
-
-# ---------------------------------------------------------------------------
 # TestEndCallDoubleFinalization
 # ---------------------------------------------------------------------------
 
@@ -1064,7 +947,7 @@ class TestBuyerErrorIsolation:
             next_step="sign",
             term_years=20,
             messages=None,
-            buyer_policy=RuleBasedBuyerPolicy(seed=42),
+            buyer_policy=None,
         ))
 
         import json

@@ -36,13 +36,6 @@ class ArchetypeProfile:
     prompt_modifier: str
     effective_tactics: str
     ineffective_tactics: str
-    # Scoring weight modifiers for rule-based policy (added to base weights)
-    need_weight_mod: float
-    trust_weight_mod: float
-    coverage_weight_mod: float
-    plan_weight_mod: float
-    # Price sensitivity multiplier (1.0 = neutral)
-    price_sensitivity_mod: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,11 +57,6 @@ ARCHETYPE_PROFILES: dict[BuyerArchetype, ArchetypeProfile] = {
         ),
         effective_tactics="Detailed quotes, ROI math, coverage rationale",
         ineffective_tactics="Emotional appeals, vague promises",
-        need_weight_mod=0.0,
-        trust_weight_mod=-0.04,
-        coverage_weight_mod=0.06,
-        plan_weight_mod=0.0,
-        price_sensitivity_mod=1.0,
     ),
     BuyerArchetype.RELATIONSHIP: ArchetypeProfile(
         label="Relationship Builder",
@@ -80,11 +68,6 @@ ARCHETYPE_PROFILES: dict[BuyerArchetype, ArchetypeProfile] = {
         ),
         effective_tactics="Active listening, empathy, personal connection",
         ineffective_tactics="Transactional tone, jumping straight to pitch",
-        need_weight_mod=-0.04,
-        trust_weight_mod=0.10,
-        coverage_weight_mod=-0.04,
-        plan_weight_mod=0.0,
-        price_sensitivity_mod=0.9,
     ),
     BuyerArchetype.SKEPTIC: ArchetypeProfile(
         label="Skeptic",
@@ -96,11 +79,6 @@ ARCHETYPE_PROFILES: dict[BuyerArchetype, ArchetypeProfile] = {
         ),
         effective_tactics="Transparency, acknowledging limitations, proof",
         ineffective_tactics="Overselling, dismissing concerns",
-        need_weight_mod=0.0,
-        trust_weight_mod=0.06,
-        coverage_weight_mod=0.0,
-        plan_weight_mod=-0.04,
-        price_sensitivity_mod=1.1,
     ),
     BuyerArchetype.BUDGET_HAWK: ArchetypeProfile(
         label="Budget Hawk",
@@ -113,11 +91,6 @@ ARCHETYPE_PROFILES: dict[BuyerArchetype, ArchetypeProfile] = {
         ),
         effective_tactics="Cheapest viable option, value per dollar framing",
         ineffective_tactics="Upselling, ignoring budget constraints",
-        need_weight_mod=-0.04,
-        trust_weight_mod=-0.02,
-        coverage_weight_mod=0.0,
-        plan_weight_mod=-0.02,
-        price_sensitivity_mod=1.4,
     ),
     BuyerArchetype.DELEGATOR: ArchetypeProfile(
         label="Delegator",
@@ -129,11 +102,6 @@ ARCHETYPE_PROFILES: dict[BuyerArchetype, ArchetypeProfile] = {
         ),
         effective_tactics="Confident recommendation, simplify choices",
         ineffective_tactics="Too many options, being indecisive",
-        need_weight_mod=0.0,
-        trust_weight_mod=0.04,
-        coverage_weight_mod=0.0,
-        plan_weight_mod=0.06,
-        price_sensitivity_mod=0.9,
     ),
     BuyerArchetype.PROCRASTINATOR: ArchetypeProfile(
         label="Procrastinator",
@@ -145,11 +113,6 @@ ARCHETYPE_PROFILES: dict[BuyerArchetype, ArchetypeProfile] = {
         ),
         effective_tactics="Gentle urgency, small steps, callbacks",
         ineffective_tactics="Hard pressure, ultimatums",
-        need_weight_mod=0.0,
-        trust_weight_mod=0.02,
-        coverage_weight_mod=-0.02,
-        plan_weight_mod=0.0,
-        price_sensitivity_mod=1.0,
     ),
     BuyerArchetype.STATUS_SEEKER: ArchetypeProfile(
         label="Status Seeker",
@@ -161,11 +124,6 @@ ARCHETYPE_PROFILES: dict[BuyerArchetype, ArchetypeProfile] = {
         ),
         effective_tactics="Premium plans, exclusivity language",
         ineffective_tactics="Budget options, making them feel cheap",
-        need_weight_mod=0.0,
-        trust_weight_mod=0.0,
-        coverage_weight_mod=0.02,
-        plan_weight_mod=0.08,
-        price_sensitivity_mod=0.7,
     ),
     BuyerArchetype.PROTECTOR: ArchetypeProfile(
         label="Protector",
@@ -178,11 +136,6 @@ ARCHETYPE_PROFILES: dict[BuyerArchetype, ArchetypeProfile] = {
         ),
         effective_tactics="Family-focused framing, dependent scenarios",
         ineffective_tactics="Ignoring family, self-focused benefits",
-        need_weight_mod=0.08,
-        trust_weight_mod=0.0,
-        coverage_weight_mod=0.02,
-        plan_weight_mod=-0.04,
-        price_sensitivity_mod=0.9,
     ),
     BuyerArchetype.COMPARISON_SHOPPER: ArchetypeProfile(
         label="Comparison Shopper",
@@ -194,11 +147,6 @@ ARCHETYPE_PROFILES: dict[BuyerArchetype, ArchetypeProfile] = {
         ),
         effective_tactics="Social proof, rate comparisons, benchmarks",
         ineffective_tactics="Refusing to compare, no frame of reference",
-        need_weight_mod=0.0,
-        trust_weight_mod=-0.02,
-        coverage_weight_mod=0.04,
-        plan_weight_mod=0.0,
-        price_sensitivity_mod=1.1,
     ),
     BuyerArchetype.IMPULSE_DECIDER: ArchetypeProfile(
         label="Impulse Decider",
@@ -210,11 +158,6 @@ ARCHETYPE_PROFILES: dict[BuyerArchetype, ArchetypeProfile] = {
         ),
         effective_tactics="Enthusiasm, momentum, easy next steps",
         ineffective_tactics="Slow process, killing momentum",
-        need_weight_mod=0.04,
-        trust_weight_mod=0.0,
-        coverage_weight_mod=-0.04,
-        plan_weight_mod=0.0,
-        price_sensitivity_mod=0.85,
     ),
 }
 

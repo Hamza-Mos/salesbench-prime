@@ -1,15 +1,13 @@
-"""Buyer decision policies for training and evaluation."""
+"""Buyer LLM policy for training and evaluation."""
 
 from __future__ import annotations
 
 import asyncio
 import json
 import logging
-import random
 import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from typing import Any
 
 import openai
 
@@ -19,202 +17,15 @@ from archetypes import (
     CRITERION_PROMPTS,
 )
 from models import (
-    BuyerArchetype,
     BuyerDecision,
     DecisionResult,
     Lead,
     LeadTemperature,
     Offer,
-    PlanType,
     RuntimeActionError,
 )
 
 logger = logging.getLogger("verifiers.salesbench")
-
-
-_TEMPERATURE_THRESHOLD_OFFSET: dict[LeadTemperature, float] = {
-    LeadTemperature.COLD: 0.12,
-    LeadTemperature.LUKEWARM: 0.04,
-    LeadTemperature.WARM: -0.02,
-    LeadTemperature.HOT: -0.08,
-}
-
-_ARCHETYPE_RESPONSES: dict[BuyerArchetype, list[str]] = {
-    BuyerArchetype.ANALYTICAL: [
-        "Can you walk me through the numbers on that?",
-        "What's the exact breakdown of coverage versus premium?",
-        "I'd like to see the ROI on this compared to alternatives.",
-    ],
-    BuyerArchetype.RELATIONSHIP: [
-        "I appreciate you taking the time to explain that.",
-        "How long have you been helping families with this?",
-        "That's good to know — tell me more about your experience.",
-    ],
-    BuyerArchetype.SKEPTIC: [
-        "What's the catch here?",
-        "Are there any hidden fees I should know about?",
-        "I've heard that before — what makes this different?",
-    ],
-    BuyerArchetype.BUDGET_HAWK: [
-        "How much would that cost me monthly?",
-        "What's the cheapest option you have?",
-        "I'm pretty careful with my budget right now.",
-    ],
-    BuyerArchetype.DELEGATOR: [
-        "What would you recommend for someone in my situation?",
-        "Just tell me what the best option is.",
-        "I trust your expertise — what should I do?",
-    ],
-    BuyerArchetype.PROCRASTINATOR: [
-        "I'll need to think about it.",
-        "Can we schedule a follow-up to discuss this further?",
-        "I'm not ready to make a decision right now.",
-    ],
-    BuyerArchetype.STATUS_SEEKER: [
-        "What's your premium option?",
-        "I want the best coverage available.",
-        "What do your top clients typically choose?",
-    ],
-    BuyerArchetype.PROTECTOR: [
-        "What would happen to my family if something happened to me?",
-        "How would this protect my kids?",
-        "My family's security is my top priority.",
-    ],
-    BuyerArchetype.COMPARISON_SHOPPER: [
-        "How does this compare to what others are offering?",
-        "What are people in my situation typically paying?",
-        "Can you show me how this stacks up against competitors?",
-    ],
-    BuyerArchetype.IMPULSE_DECIDER: [
-        "That sounds great — what's the next step?",
-        "Let's do it, I'm ready.",
-        "Sounds good, how do we get started?",
-    ],
-}
-
-
-class RuleBasedBuyerPolicy:
-    """Rule-based and stochastic buyer model with deterministic seeding."""
-
-    def __init__(self, seed: int) -> None:
-        self._rng = random.Random(seed)
-
-    def evaluate_offer(self, *, lead: Lead, offer: Offer, **kwargs: Any) -> DecisionResult:
-        profile = ARCHETYPE_PROFILES[lead.archetype]
-
-        monthly_income = max(lead.annual_income / 12.0, 1.0)
-        affordability_ratio = offer.monthly_premium / monthly_income
-
-        target_coverage = max(100_000.0, lead.annual_income * 8.0)
-        coverage_error = abs(offer.coverage_amount - target_coverage) / target_coverage
-        coverage_fit = max(0.0, 1.0 - coverage_error)
-
-        plan_fit = self._plan_fit(plan_type=offer.plan_type, lead=lead)
-        pressure_penalty = max(0, lead.call_count - 1) * 0.08
-        price_penalty = affordability_ratio * (1.10 + lead.price_sensitivity) * profile.price_sensitivity_mod
-
-        need_w = 0.42 + profile.need_weight_mod
-        trust_w = 0.24 + profile.trust_weight_mod
-        coverage_w = 0.22 + profile.coverage_weight_mod
-        plan_w = 0.12 + profile.plan_weight_mod
-
-        score = (
-            need_w * lead.latent_need
-            + trust_w * lead.trust_level
-            + coverage_w * coverage_fit
-            + plan_w * plan_fit
-            - price_penalty
-            - pressure_penalty
-        )
-        score += self._rng.uniform(-0.05, 0.05)
-
-        threshold = 0.62 + _TEMPERATURE_THRESHOLD_OFFSET[lead.temperature]
-        request_dnc = lead.call_count >= lead.max_calls and score < 0.45
-
-        if affordability_ratio > 0.060:
-            return DecisionResult(
-                decision=BuyerDecision.REJECT,
-                reason="Premium exceeds practical monthly budget.",
-                score=score,
-                request_dnc=request_dnc,
-            )
-
-        if score >= threshold:
-            return DecisionResult(
-                decision=BuyerDecision.ACCEPT,
-                reason="Coverage and premium align with household priorities.",
-                score=score,
-                request_dnc=False,
-            )
-
-        if request_dnc:
-            return DecisionResult(
-                decision=BuyerDecision.HANG_UP,
-                reason="Repeated outreach reduced trust; do-not-call requested.",
-                score=score,
-                request_dnc=True,
-            )
-
-        if score <= 0.28 and lead.call_count >= 2:
-            return DecisionResult(
-                decision=BuyerDecision.HANG_UP,
-                reason="Offer quality is low and buyer disengaged.",
-                score=score,
-                request_dnc=False,
-            )
-
-        return DecisionResult(
-            decision=BuyerDecision.REJECT,
-            reason="Buyer declined this offer but remains in pipeline.",
-            score=score,
-            request_dnc=False,
-        )
-
-    def _plan_fit(self, *, plan_type: PlanType, lead: Lead) -> float:
-        if plan_type == PlanType.TERM:
-            return min(1.0, 0.55 + lead.latent_need * 0.45)
-        if plan_type == PlanType.WHOLE:
-            return min(1.0, 0.30 + (1.0 - lead.price_sensitivity) * 0.70)
-        if plan_type == PlanType.UL:
-            return min(1.0, 0.45 + lead.trust_level * 0.55)
-        if plan_type == PlanType.DI:
-            return min(1.0, 0.40 + lead.latent_need * 0.60)
-        return 0.50
-
-    def generate_response(
-        self, *, lead: Lead, agent_message: str, **kwargs: Any
-    ) -> str:
-        """Return a canned buyer response based on archetype and attributes."""
-        archetype_pool = _ARCHETYPE_RESPONSES.get(lead.archetype, [])
-        # 60% archetype-specific, 40% attribute-based fallback
-        if archetype_pool and self._rng.random() < 0.60:
-            return self._rng.choice(archetype_pool)
-
-        if lead.price_sensitivity > 0.7:
-            options = [
-                "How much would that cost me monthly?",
-                "I'm pretty careful with my budget right now.",
-                "What's the cheapest option you have?",
-            ]
-        elif lead.latent_need > 0.7:
-            options = [
-                "Tell me more about the coverage options.",
-                "I've been thinking about getting something like this.",
-                "What would you recommend for someone in my situation?",
-            ]
-        elif lead.trust_level < 0.4:
-            options = [
-                "I'm not sure I'm interested.",
-                "Can you send me something in writing first?",
-                "I'll need to think about it.",
-            ]
-        else:
-            options = [
-                "Okay, what do you have in mind?",
-                "I'm listening.",
-                "Go ahead, I've got a few minutes.",
-            ]
-        return self._rng.choice(options)
 
 
 _TEMPERATURE_READINESS: dict[LeadTemperature, str] = {

@@ -4,7 +4,7 @@ This module implements the 3-party orchestration pattern (inspired by
 tau2-bench):
 
 * **Runtime** (``runtime.py``) — pure deterministic state machine
-* **Buyer policy** (``policy.py``) — LLM or rule-based buyer participant
+* **Buyer LLM** (``policy.py``) — counterparty simulator (default ``gpt-5-mini``)
 * **Orchestrator** (this file) — routes between runtime and buyer, owns
   the buyer policy, handles error isolation and context compression
 
@@ -27,7 +27,7 @@ import verifiers as vf
 
 from config import EpisodeConfig
 from dataset import build_salesbench_dataset
-from policy import LLMBuyerPolicy, RuleBasedBuyerPolicy
+from policy import LLMBuyerPolicy
 from rewards import DEFAULT_REWARD_WEIGHTS, RUBRIC_FUNCS, RUBRIC_WEIGHTS, build_rubric
 from runtime import SalesEpisodeRuntime
 from tools import ALL_TOOLS
@@ -84,7 +84,6 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         context_rewrite_threshold: float = 0.80,
         context_keep_recent: int = 10,
         context_max_seq_len: int | None = None,
-        buyer_policy_type: str = "llm",
         buyer_model: str = "gpt-5-mini",
         buyer_base_url: str = "https://api.openai.com/v1",
         buyer_api_key_var: str = "OPENAI_API_KEY",
@@ -99,8 +98,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         self.context_keep_recent = context_keep_recent
         self.context_max_seq_len = context_max_seq_len
 
-        # Buyer policy config — used per-episode in setup_state
-        self.buyer_policy_type = buyer_policy_type
+        # Buyer LLM config — used per-episode in setup_state
         self.buyer_model = buyer_model
         self.buyer_base_url = buyer_base_url
         self.buyer_api_key_var = buyer_api_key_var
@@ -142,16 +140,13 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         )
         runtime = SalesEpisodeRuntime(config=config)
 
-        # Buyer policy — separate participant, NOT inside runtime
-        if self.buyer_policy_type == "llm":
-            buyer_policy: LLMBuyerPolicy | RuleBasedBuyerPolicy = LLMBuyerPolicy(
-                model=self.buyer_model,
-                base_url=self.buyer_base_url,
-                api_key=os.getenv(self.buyer_api_key_var, ""),
-                prompt_variant=self.buyer_prompt_variant,
-            )
-        else:
-            buyer_policy = RuleBasedBuyerPolicy(seed=config.seed + 17)
+        # Buyer LLM — separate participant, NOT inside runtime
+        buyer_policy = LLMBuyerPolicy(
+            model=self.buyer_model,
+            base_url=self.buyer_base_url,
+            api_key=os.getenv(self.buyer_api_key_var, ""),
+            prompt_variant=self.buyer_prompt_variant,
+        )
 
         state["runtime"] = runtime
         state["buyer_policy"] = buyer_policy
@@ -303,7 +298,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
 
     async def _get_buyer_conversation_reply(
         self,
-        buyer_policy: LLMBuyerPolicy | RuleBasedBuyerPolicy,
+        buyer_policy: LLMBuyerPolicy,
         lead: Any,
         agent_text: str,
         messages: list | None,
@@ -487,7 +482,6 @@ def load_environment(
     seed: int | str | None = None,
     num_leads: int | str = 100,
     total_hours: int | str = 80,
-    buyer_policy: str = "llm",
     buyer_model: str = "gpt-5-mini",
     buyer_base_url: str = "https://api.openai.com/v1",
     buyer_api_key_var: str = "OPENAI_API_KEY",
@@ -545,8 +539,7 @@ def load_environment(
         load_dotenv(root / "secrets.env", override=False)
         load_dotenv(root / ".env", override=False)
 
-    if buyer_policy == "llm":
-        vf.ensure_keys([buyer_api_key_var])
+    vf.ensure_keys([buyer_api_key_var])
 
     dataset = build_salesbench_dataset(
         split=split,
@@ -554,7 +547,6 @@ def load_environment(
         base_seed=resolved_seed,
         base_num_leads=num_leads,
         total_hours=total_hours,
-        buyer_policy=buyer_policy,
         buyer_model=buyer_model,
         buyer_base_url=buyer_base_url,
         buyer_api_key_var=buyer_api_key_var,
@@ -567,7 +559,6 @@ def load_environment(
         base_seed=resolved_seed,
         base_num_leads=num_leads,
         total_hours=total_hours,
-        buyer_policy=buyer_policy,
         buyer_model=buyer_model,
         buyer_base_url=buyer_base_url,
         buyer_api_key_var=buyer_api_key_var,
@@ -588,7 +579,6 @@ def load_environment(
         context_rewrite_threshold=context_rewrite_threshold,
         context_keep_recent=context_keep_recent,
         context_max_seq_len=context_max_seq_len,
-        buyer_policy_type=buyer_policy,
         buyer_model=buyer_model,
         buyer_base_url=buyer_base_url,
         buyer_api_key_var=buyer_api_key_var,
