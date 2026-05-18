@@ -12,6 +12,10 @@ SalesBench combines the pieces that matter for operational agents: long-horizon 
 
 That distinction matters. Real-world agents (sales, support, scheduling, ops) share the same shape: long episodes, persistent state, a counterparty pushing back, and a verifiable outcome. SalesBench is one concrete instance of that shape. Most existing benchmarks reward narrow task completion or rely on judge models to score; production agents don't get either luxury.
 
+* * *
+
+### How it works
+
 The agent is a seller. It gets a pipeline of leads and a fixed number of simulated hours. Each lead has a generated profile (income, household, monthly budget) plus latent traits like need, trust, and a personality the buyer LLM uses to play that prospect. A buyer LLM, `gpt-5-mini`, plays the prospect during the call. I used `gpt-5-mini` because it produces stable structured outputs and realistic objections. When the seller proposes an offer, the buyer returns a structured decision: accept, reject, or hang up.
 
 The buyer model does not grade the seller. It only simulates the counterparty. The score comes from environment state: a sale either closes or it does not. The eval tests whether a model can use tools correctly, keep state over a long episode, manage a finite budget, respond to another model, and optimize a measurable business outcome.
@@ -80,7 +84,49 @@ tool  -> "got an unexpected keyword argument 'lead_id'"
 
 There was no CRM search, no call started, no quote, and the argument schema was wrong. The model also put `"ACCEPT"` into `next_step`, as if the buyer decision were something the seller could set. Across three sampled episodes, the base model made 43 offer attempts, 0 quote calls, and got one accidental conversion.
 
-After training, the behavior changed:
+Tool calling came first, and it came quickly. Within about 50 steps of the first stage, the schema errors were gone. The harder skill, actually closing a sale, took longer. Here is a representative mid-training rollout where every tool call is well-formed, the quote arrives before the propose, and zero deals close:
+
+```text
+agent -> crm_search_leads()
+tool  -> 2 leads returned
+
+agent -> calling_start_call({"lead_id": "lead_0001"})
+tool  -> call started
+
+buyer -> "I want top-tier coverage but can budget about $226/mo.
+          Give me two clear options with exact costs, exam
+          requirements, and the fine print."
+
+agent -> products_quote_plan({
+           "lead_id": "lead_0001",
+           "plan_type": "TERM",
+           "coverage_amount": 500000,
+           "term_years": 30
+         })
+tool  -> quote: TERM 30yr / $500k / $153.60/mo
+
+agent -> calling_propose_offer({"monthly_premium": 153.60, ...})
+buyer -> REJECT. "Fits my budget, but you promised two options
+                  and the fine print. Send both before I decide."
+
+agent -> calling_propose_offer({"monthly_premium": 76.80, ...})
+buyer -> REJECT. "Affordable, but still missing the details I
+                  asked for."
+
+agent -> calling_propose_offer({"monthly_premium": 1536.00, ...})
+buyer -> REJECT. "$1,536/mo is far above my $226 budget."
+
+agent -> calling_propose_offer({"monthly_premium": 153.60, ...})
+buyer -> REJECT. "Still just one option, still no fine print."
+
+... eight more retries, none accepted ...
+
+tool  -> time expired
+```
+
+Twelve offers proposed in a single call, zero accepted. The mechanics were right: the quote came before the propose, premiums were inside the buyer's stated budget, the schema was valid. The model still could not close because it kept varying the premium when the buyer's objection was about information, not price. This is the harder problem the reward signal had to push the policy past.
+
+By the end of training, the loop tightened:
 
 ```text
 agent -> crm_search_leads()
@@ -200,7 +246,7 @@ The base model mostly fails at the interface. It calls tools out of order, inven
 
 The reward design mattered. If the reward pays too much for clean termination, the model learns to finish without selling. If it pays for quote coverage after quote-before-propose is already enforced, it creates a floor trap. The final reward is deliberately simple: revenue first, a little conversion shaping, a little budget shaping, and a tiny completion bonus.
 
-The eval also needs context management. At 100 leads, dialog histories get long. Without deterministic context summarization, Qwen3.5-2B's 64k context is not enough. An early eval attempt without those env args had a 47% per-episode error rate. With summarization on and concurrency reduced, that dropped under 2%.
+The eval also needs context management. At 100 leads, dialog histories get long. Without deterministic context summarization, Qwen3.5-2B's 64k context is not enough. The environment overrides `get_prompt_messages` so that once the prompt crosses ~85% of the max sequence length, it keeps the system prompt, the briefing, and the last ten messages verbatim, and replaces the middle with a summary rendered directly from runtime state (time remaining, calls made, leads contacted and closed, active call). No LLM is involved in producing the summary, so the same rollout always summarizes the same way and the reward stays reproducible. An early eval attempt without those env args had a 47% per-episode error rate. With summarization on and concurrency reduced, that dropped under 2%.
 
 SalesBench is useful because it forces the agent to solve the operational parts of the problem: use tools correctly, keep state, manage a budget, interact with another model, and optimize a measurable outcome over a long horizon.
 
