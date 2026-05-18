@@ -1,6 +1,6 @@
 # SalesBench: The Long-Horizon Agent-to-Agent Eval
 
-TL;DR: SalesBench is an open reinforcement-learning (RL) environment for training and evaluating sales agents. The agent works a pipeline of simulated insurance leads, talks to a buyer LLM on each call, and is scored by revenue closed rather than by an LLM judge. I trained a small open model on it through a short curriculum, then ran a held-out eval at a harder scale than it ever trained on. It vastly outperforms the untrained base, and the gap actually widens as the task gets harder. The environment, eval, and training configs are all released.
+TL;DR: SalesBench is an open reinforcement-learning (RL) environment for training and evaluating sales agents. The agent works a pipeline of simulated insurance leads, talks to a buyer LLM on each call, and is scored by revenue closed rather than by an LLM judge. I trained a small open model on it through a short curriculum, then ran a held-out eval at a larger scale than it ever trained on. It vastly outperforms the untrained base, and the gap actually widens as the task gets harder. The environment, eval, and training configs are all released.
 
 * * *
 
@@ -40,7 +40,7 @@ calling_end_call             1 min
 calendar_schedule_callback   1 min
 ```
 
-Time is the main constraint. Proposing an offer costs 4 minutes. Repeated bad offers to one lead burn the same budget the agent could have spent working the rest of the pipeline.
+Time is the main constraint, and it is what makes the task economic. Without a finite budget, the dominant strategy would be to hammer the same buyer until something sticks, which is not sales. Proposing an offer costs 4 minutes. Repeated bad offers to one lead burn the same budget the agent could have spent working the rest of the pipeline.
 
 The intended workflow is simple:
 
