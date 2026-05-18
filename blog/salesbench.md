@@ -261,7 +261,7 @@ The pattern is portable: use the LLM as the counterparty, keep the reward ground
 ### Run It
 
 ```bash
-uv tool install prime-cli
+uv tool install prime
 prime login
 cp secrets.env.example secrets.env  # add OPENAI_API_KEY
 prime env install salesbench/salesbench
