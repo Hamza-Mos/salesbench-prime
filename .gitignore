@@ -26,7 +26,8 @@ training_docs.md
 # Claude Code local session files
 .claude/
 
-# Eval cell logs are bulky and re-creatable from `bash tools/run_eval_matrix.sh`.
-# Keep summary.json checked in (it's the canonical numbers cited in the blog).
-tools/results/prime-eval/*.log
-tools/results/prime-eval/run-50lead/
+# Eval result artifacts are bulky and re-creatable. Keep only the canonical
+# summary.json checked in (cited as headline numbers).
+tools/results/**
+!tools/results/prime-eval/
+!tools/results/prime-eval/summary.json
