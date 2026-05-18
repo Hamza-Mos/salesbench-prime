@@ -239,6 +239,14 @@ class TestRuntimeStateTransitions:
         assert result["call_id"] == "call_0001"
         assert rt.active_call is not None
 
+        # Quote before propose (env constraint, v0.24.2+).
+        rt.quote_plan(
+            lead_id=lead_id,
+            plan_type="TERM",
+            coverage_amount=500_000,
+            term_years=20,
+        )
+
         # Record offer (deterministic — no buyer LLM)
         offer_result = rt.record_offer(
             plan_type="TERM",
@@ -270,6 +278,7 @@ class TestRuntimeStateTransitions:
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
+        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
 
         rt.record_offer(
             plan_type="TERM",
@@ -292,6 +301,7 @@ class TestRuntimeStateTransitions:
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
+        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
 
         rt.record_offer(
             plan_type="TERM",
@@ -348,6 +358,7 @@ class TestRuntimeStateTransitions:
         rt = _make_runtime(total_hours=1)  # 60 min
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
+        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
         rt.current_minute = rt.config.max_minutes - 1  # 1 min left, propose costs 4
 
         result = rt.record_offer(
@@ -864,6 +875,7 @@ class TestSeparationOfConcerns:
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
+        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
         time_before = rt.current_minute
 
         result = rt.record_offer(
@@ -888,6 +900,7 @@ class TestSeparationOfConcerns:
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
+        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
         rt.record_offer(
             plan_type="TERM",
             coverage_amount=500_000,
@@ -926,6 +939,7 @@ class TestSeparationOfConcerns:
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
+        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
         rt.record_offer(
             plan_type="TERM",
             coverage_amount=500_000,
@@ -1005,6 +1019,7 @@ class TestBuyerErrorIsolation:
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
+        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
 
         invalid_before = rt.stats.invalid_actions
 
