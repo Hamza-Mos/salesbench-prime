@@ -59,7 +59,7 @@ reward = 1.00 * revenue_mrr / max_achievable_mrr
        - 0.005 * invalid_actions
 ```
 
-MRR (monthly recurring revenue) dominates. Conversion rate and budget utilization shape the policy. The completion bonus is intentionally small because earlier reward versions overpaid for clean termination, and the model learned to end episodes instead of selling.
+MRR (monthly recurring revenue) dominates. Conversion rate and budget utilization shape the policy. DNC (do-not-call) violations happen when the agent contacts a lead that has asked to be left alone, and the penalty is large enough that ignoring the request never pays. The completion bonus is intentionally small because earlier reward versions overpaid for clean termination, and the model learned to end episodes instead of selling.
 
 The environment provides a learning signal because the model is rewarded for closing revenue, not for sounding persuasive.
 
@@ -217,7 +217,7 @@ At 50 leads, the trained model converts 20.6x more leads than the base. At 100 l
 
 The gap grows as the eval gets harder. When the pipeline doubles from 50 to 100 leads, the trained model's conversion rate drops from 26.8% to 18.5%. The untrained base drops from 1.3% to 0.3%. The trained policy degrades under scale, but the base model collapses much faster.
 
-Do-not-call (DNC) violations stayed near zero across the eval. At 100 leads, the trained model also improved per-turn closing rate by roughly 35x. The base averages about 0.003 conversions per dialog turn. The trained model averages about 0.112.
+DNC violations stayed near zero across the eval. At 100 leads, the trained model also improved per-turn closing rate by roughly 35x. The base averages about 0.003 conversions per dialog turn. The trained model averages about 0.112.
 
 ![Per-lead conversion at 50 leads vs 100 leads, side by side. The lift over the untrained base widens with scale.](charts/scaling_50_vs_100.png)
 
@@ -261,7 +261,7 @@ The pattern is portable: use the LLM as the counterparty, keep the reward ground
 ### Run It
 
 ```bash
-pip install prime-cli
+uv tool install prime-cli
 prime login
 cp secrets.env.example secrets.env  # add OPENAI_API_KEY
 prime env install salesbench/salesbench

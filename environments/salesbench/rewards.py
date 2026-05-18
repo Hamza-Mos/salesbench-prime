@@ -243,14 +243,16 @@ _REWARD_FUNCS = [
 # qc(0.10) + completion(0.05) = 0.15 floor and stopped exploring conversions.
 # quote_coverage removed (env constraint enforces it; was redundant). completion
 # scaled down so time_budget_exhausted contributes ≤0.01. Ceiling: 1.60 → 1.42.
-_REWARD_WEIGHTS = [
-    1.00,   # reward_revenue_mrr         — primary objective: maximize normalized revenue
-    0.10,   # reward_conversion_rate     — reduced: saturated at higher lead counts
-    -0.30,  # penalty_dnc_violations     — hard compliance (safety rail)
-    -0.05,  # penalty_invalid_actions    — keep low; unavoidable schema errors add noise
-    0.02,   # reward_episode_completion  — tiny tie-breaker; not enough to be a floor
-    0.30,   # reward_budget_utilization  — premium capture
-]
+DEFAULT_REWARD_WEIGHTS: dict[str, float] = {
+    "reward_revenue_mrr":        1.00,   # primary objective: normalized revenue
+    "reward_conversion_rate":    0.10,   # reduced: saturated at higher lead counts
+    "penalty_dnc_violations":   -0.30,   # hard compliance (safety rail)
+    "penalty_invalid_actions":  -0.05,   # keep low; unavoidable schema errors add noise
+    "reward_episode_completion": 0.02,   # tiny tie-breaker; not enough to be a floor
+    "reward_budget_utilization": 0.30,   # premium capture
+}
+
+_REWARD_WEIGHTS = [DEFAULT_REWARD_WEIGHTS[f.__name__] for f in _REWARD_FUNCS]
 
 _ERROR_TYPE_MAP = {
     "BadRequestError": 1.0,
@@ -403,3 +405,24 @@ _STATE_METRICS = [
 _ALL_METRICS = _GENERATED_METRICS + _STATE_METRICS + _BUYER_LLM_METRICS
 RUBRIC_FUNCS = _REWARD_FUNCS + _ALL_METRICS
 RUBRIC_WEIGHTS = _REWARD_WEIGHTS + [0.00] * len(_ALL_METRICS)
+
+
+def build_rubric(
+    overrides: dict[str, float] | None = None,
+) -> tuple[list[Callable[[dict[str, Any]], Any]], list[float]]:
+    """Return (funcs, weights) for vf.Rubric construction.
+
+    Reward funcs default to DEFAULT_REWARD_WEIGHTS; any matching keys in
+    `overrides` replace the default. Unknown keys are ignored. Metric funcs
+    always get weight 0.
+    """
+    weights_map = dict(DEFAULT_REWARD_WEIGHTS)
+    if overrides:
+        for name, value in overrides.items():
+            if name in DEFAULT_REWARD_WEIGHTS:
+                try:
+                    weights_map[name] = float(value)
+                except (TypeError, ValueError):
+                    pass
+    reward_weights = [weights_map[f.__name__] for f in _REWARD_FUNCS]
+    return RUBRIC_FUNCS, reward_weights + [0.00] * len(_ALL_METRICS)

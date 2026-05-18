@@ -28,7 +28,7 @@ import verifiers as vf
 from config import EpisodeConfig
 from dataset import build_salesbench_dataset
 from policy import LLMBuyerPolicy, RuleBasedBuyerPolicy
-from rewards import RUBRIC_FUNCS, RUBRIC_WEIGHTS
+from rewards import DEFAULT_REWARD_WEIGHTS, RUBRIC_FUNCS, RUBRIC_WEIGHTS, build_rubric
 from runtime import SalesEpisodeRuntime
 from tools import ALL_TOOLS
 
@@ -89,6 +89,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         buyer_base_url: str = "https://api.openai.com/v1",
         buyer_api_key_var: str = "OPENAI_API_KEY",
         buyer_prompt_variant: str = "default",
+        reward_weights: dict[str, float] | None = None,
         **kwargs: Any,
     ) -> None:
         self.default_seed = default_seed
@@ -105,7 +106,12 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         self.buyer_api_key_var = buyer_api_key_var
         self.buyer_prompt_variant = buyer_prompt_variant
 
-        rubric = vf.Rubric(funcs=RUBRIC_FUNCS, weights=RUBRIC_WEIGHTS)
+        rubric_funcs, rubric_weights = build_rubric(reward_weights)
+        self.reward_weights = {
+            name: rubric_weights[i]
+            for i, name in enumerate(DEFAULT_REWARD_WEIGHTS.keys())
+        }
+        rubric = vf.Rubric(funcs=rubric_funcs, weights=rubric_weights)
         super().__init__(
             dataset=dataset,
             eval_dataset=eval_dataset,
@@ -492,6 +498,13 @@ def load_environment(
     context_rewrite_threshold: float | str = 0.80,
     context_keep_recent: int | str = 10,
     context_max_seq_len: int | str | None = None,
+    # Reward weights (defaults are the canonical v36+ values; pass as env args to sweep).
+    reward_revenue_mrr: float | str = 1.00,
+    reward_conversion_rate: float | str = 0.10,
+    reward_budget_utilization: float | str = 0.30,
+    reward_episode_completion: float | str = 0.02,
+    penalty_dnc_violations: float | str = -0.30,
+    penalty_invalid_actions: float | str = -0.05,
 ) -> vf.Environment:
     """Entry-point for Prime verifiers/Prime Lab."""
 
@@ -507,6 +520,15 @@ def load_environment(
     context_rewrite_threshold = _coerce_float(context_rewrite_threshold, 0.80)
     context_keep_recent = _coerce_int(context_keep_recent, 10)
     context_max_seq_len = _coerce_int(context_max_seq_len, None) if context_max_seq_len is not None else None  # type: ignore[arg-type]
+
+    reward_weights = {
+        "reward_revenue_mrr":        _coerce_float(reward_revenue_mrr, 1.00),
+        "reward_conversion_rate":    _coerce_float(reward_conversion_rate, 0.10),
+        "reward_budget_utilization": _coerce_float(reward_budget_utilization, 0.30),
+        "reward_episode_completion": _coerce_float(reward_episode_completion, 0.02),
+        "penalty_dnc_violations":    _coerce_float(penalty_dnc_violations, -0.30),
+        "penalty_invalid_actions":   _coerce_float(penalty_invalid_actions, -0.05),
+    }
 
     resolved_seed = base_seed if seed is None else seed
 
@@ -571,4 +593,5 @@ def load_environment(
         buyer_base_url=buyer_base_url,
         buyer_api_key_var=buyer_api_key_var,
         buyer_prompt_variant=buyer_prompt_variant,
+        reward_weights=reward_weights,
     )
