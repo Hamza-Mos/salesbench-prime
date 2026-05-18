@@ -124,7 +124,11 @@ buyer -> REJECT. "Still just one option, still no fine print."
 tool  -> time expired
 ```
 
-Twelve offers proposed in a single call, zero accepted. The mechanics were right: the quote came before the propose, premiums were inside the buyer's stated budget, the schema was valid. The model still could not close because it kept varying the premium when the buyer's objection was about information, not price. This is the harder problem the reward signal had to push the policy past.
+Twelve offers proposed in a single call, zero accepted. The mechanics were right: the quote came before the propose, premiums were inside the buyer's stated budget, the schema was valid.
+
+This is what the invalid-action penalty is for. Every malformed call costs a small amount of reward, and the environment rejects a `propose_offer` that isn't preceded by a `products_quote_plan` for the same lead (also counted as an invalid action). With GRPO, even when every rollout in a group converts zero leads, rollouts with fewer invalid actions get a small relative advantage over ones with more. The policy finds a gradient on tool discipline well before it finds one on selling.
+
+The model still could not close because it kept varying the premium when the buyer's objection was about information, not price. That is the harder problem the reward signal had to push the policy past.
 
 By the end of training, the loop tightened:
 
