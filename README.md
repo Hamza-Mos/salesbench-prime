@@ -6,7 +6,7 @@ Standalone, Prime-stack-first harness for training and evaluating sales agents w
 
 SalesBench is a simulated insurance sales environment built on Prime Intellect's [verifiers](https://github.com/PrimeIntellect-ai/verifiers) framework. An LLM agent is dropped into a sales scenario with a pool of leads (prospective buyers) and a time budget, and must maximize monthly recurring revenue (MRR) by searching the CRM, calling leads, quoting insurance plans, and closing deals.
 
-Each episode is fully deterministic given a seed — the same seed always produces identical leads, buyer personalities, and decision outcomes, enabling reproducible evaluation.
+Each episode's runtime state is deterministic given a seed: the same seed produces identical leads, product prices, time costs, and tool-state transitions. Buyer responses come from the configured buyer LLM, so repeated model rollouts can still differ, which is what makes multi-sample evaluation useful.
 
 ## Quick Start
 
@@ -15,10 +15,10 @@ Each episode is fully deterministic given a seed — the same seed always produc
 prime env install salesbench/salesbench
 
 # run an eval (1 episode, 1 attempt, using gpt-5-mini)
-prime eval run salesbench/salesbench -m openai/gpt-5-mini -n 1 -r 1
+prime eval run salesbench -m openai/gpt-5-mini -n 1 -r 1
 
 # more robust eval (10 episodes, 3 attempts each = 30 total runs)
-prime eval run salesbench/salesbench -m openai/gpt-5-mini -n 10 -r 3
+prime eval run salesbench -m openai/gpt-5-mini -n 10 -r 3
 ```
 
 ### Key flags
@@ -34,9 +34,9 @@ Total simulations = `n × r`. Results are uploaded to Prime Hub by default (use 
 
 ## Episode Structure
 
-Each episode gives the agent:
+Each default eval episode gives the agent:
 
-- **~100 leads** — deterministically generated prospects with demographics (age, income, state), behavioral attributes (need, trust, price sensitivity), and a monthly budget.
+- **100 leads** — deterministically generated prospects with demographics (age, income, state), behavioral attributes (need, trust, price sensitivity), and a monthly budget.
 - **Time budget** — 10 work days × 8 hours = 4,800 simulated minutes. Each tool call costs time (e.g. `propose_offer` = 4 min, `start_call` = 1 min).
 - **Insurance product catalog** — Term, Whole, Universal Life, and Disability Income plans with deterministic premium pricing.
 
@@ -64,13 +64,26 @@ Set the environment variable named by `buyer_api_key_var` before running:
 export OPENAI_API_KEY="sk-..."
 
 # Or any OpenAI-compatible endpoint — vLLM, sglang, OpenRouter, PrimeIntellect proxy, etc.
-prime eval run salesbench/salesbench -m openai/gpt-5-mini -n 1 -r 1 \
+prime eval run salesbench -m openai/gpt-5-mini -n 1 -r 1 \
   -a '{"buyer_model": "openai/gpt-5-mini", "buyer_base_url": "https://api.pinference.ai/api/v1", "buyer_api_key_var": "PRIME_API_KEY"}'
 ```
 
 ## Scoring
 
-The primary reward is **total converted MRR** — the sum of monthly premiums from all successful sales. Additional metrics are tracked but not weighted into the score:
+The canonical reward is a weighted composite with revenue as the primary objective:
+
+```text
+reward = 1.00 * revenue_mrr / max_achievable_mrr
+       + 0.10 * conversions / num_leads
+       + 0.30 * budget_utilization
+       + 0.02 * completion_bonus
+       - 0.30 * dnc_violations
+       - 0.005 * invalid_actions
+```
+
+`completion_bonus` is intentionally tiny so it cannot become a floor strategy. `calling_propose_offer` also requires a prior `products_quote_plan` for the same lead, so the model cannot earn revenue by proposing hallucinated prices.
+
+Additional zero-weight metrics are logged for analysis:
 
 - Conversion rate, call efficiency
 - DNC (do-not-call) violations

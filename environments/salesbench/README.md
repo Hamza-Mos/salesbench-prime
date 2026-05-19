@@ -28,11 +28,21 @@ It simulates an insurance sales pipeline with synthetic leads, a product catalog
 
 ## Rewards And Metrics
 
-The environment uses a `verifiers.Rubric` with:
+The environment uses a `verifiers.Rubric` with a revenue-first composite:
 
-- Primary reward: converted monthly recurring revenue (MRR)
-- Additional rewards/penalties: conversion rate, efficiency, invalid actions, do-not-call violations
+- Primary reward: normalized converted monthly recurring revenue (MRR)
+- Shaping rewards: conversion rate, accepted-premium-to-budget utilization, tiny completion bonus
+- Penalties: invalid actions and do-not-call violations
 - Logged metrics: revenue MRR, conversions, calls started, time utilization, episode done, etc.
+
+```text
+reward = 1.00 * revenue_mrr / max_achievable_mrr
+       + 0.10 * conversions / num_leads
+       + 0.30 * budget_utilization
+       + 0.02 * completion_bonus
+       - 0.30 * dnc_violations
+       - 0.005 * invalid_actions
+```
 
 ## Setup
 
@@ -68,7 +78,7 @@ prime env push --path ./environments/salesbench --team <team-slug> -v PRIVATE
 Run an eval (Prime Inference is used by default; configure endpoints in `configs/endpoints.py`):
 
 ```bash
-prime eval run salesbench -m openai/gpt-5-nano -n 20 -r 3
+prime eval run salesbench -m openai/gpt-5-mini -n 20 -r 3
 ```
 
 View results:
@@ -95,6 +105,17 @@ These map to `salesbench.load_environment(...)`:
 | `max_examples`      | `int`         | `-1`      | Optional cap after dataset generation.                   |
 | `context_rewrite_threshold` | `float` | `0.80`  | Fraction of `max_seq_len` at which to trigger context summarization. |
 | `context_keep_recent` | `int`       | `10`      | Number of recent messages to keep verbatim after summarization. |
+| `context_max_seq_len` | `int \| None` | `None` | Explicit max sequence length override for eval contexts where infra does not set one. |
+| `buyer_model` | `str` | `"gpt-5-mini"` | Buyer LLM model name. |
+| `buyer_base_url` | `str` | `"https://api.openai.com/v1"` | OpenAI-compatible buyer LLM endpoint. |
+| `buyer_api_key_var` | `str` | `"OPENAI_API_KEY"` | Environment variable that stores the buyer endpoint API key. |
+| `buyer_prompt_variant` | `str` | `"default"` | Buyer prompt style: `default`, `skeptical`, `impulsive`, or `analytical`. |
+| `reward_revenue_mrr` | `float` | `1.00` | Weight for normalized converted MRR. |
+| `reward_conversion_rate` | `float` | `0.10` | Weight for per-lead conversion rate. |
+| `reward_budget_utilization` | `float` | `0.30` | Weight for accepted premium as a share of lead budget. |
+| `reward_episode_completion` | `float` | `0.02` | Weight for shaped completion bonus. |
+| `penalty_dnc_violations` | `float` | `-0.30` | Weight for do-not-call violations. |
+| `penalty_invalid_actions` | `float` | `-0.05` | Weight applied to `0.1 * invalid_actions`. |
 
 Pass args via `--env-args` / `-a` as JSON:
 

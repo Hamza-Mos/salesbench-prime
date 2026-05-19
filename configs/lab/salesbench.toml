@@ -1,17 +1,10 @@
-# v44: scale 8 → 20 leads, warm-start from v43 step 215 ckpt g1gymcfizm5kb3wnwa3xtopv.
-# v43 ran only 2 steps but BOTH showed mastery: step 215 reward 1.267
-# (89% ceiling), 7.31/8 conv per ep, 7.70/8 contact. Step 216: 1.273.
-# Near-instant 8-lead transfer. Decided to jump to 20 leads now.
-# v44 = TERMINAL training stage per Eli-aligned strategy. After this,
-# eval at 50 leads using configs/eval/* (untrained vs trained × 4 buyer
-# variants).
-# total_hours = 10 (30 min/lead, proportional).
-# max_steps = 315 (= ckpt step 215 + 100 productive steps).
-# 20-lead episode wall clock ~50-60 min/step → 50 productive steps ~ 2 days.
+# Default hosted training config: stage 1 from scratch on 2 leads / 1h episodes.
+#
+# For the full publication curriculum, use configs/curriculum/stage1-2-leads.toml
+# through stage4-20-leads.toml and copy each checkpoint_id into the next stage.
 
 model = "Qwen/Qwen3.5-2B"
-checkpoint_id = "g1gymcfizm5kb3wnwa3xtopv"
-max_steps = 315
+max_steps = 200
 batch_size = 128
 rollouts_per_example = 32
 oversampling_factor = 2.5
@@ -26,7 +19,7 @@ temperature = 1.0
 
 [[env]]
 id = "salesbench/salesbench"
-args = { split = "train", num_examples = 2048, num_leads = 20, total_hours = 10, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
+args = { split = "train", num_examples = 2048, num_leads = 2, total_hours = 1, context_rewrite_threshold = 0.85, context_keep_recent = 10, context_max_seq_len = 16000 }
 
 [buffer]
 online_difficulty_filtering = true
@@ -35,8 +28,3 @@ seed = 2026
 [checkpoints]
 interval = 5
 keep_cloud = 5
-
-[wandb]
-project = "salesbench"
-name = "qwen3.5-2b-salesbench-v44"
-entity = "hamza-mos-university-of-waterloo"

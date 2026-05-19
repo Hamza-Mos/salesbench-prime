@@ -9,9 +9,9 @@ tau2-bench):
   the buyer policy, handles error isolation and context compression
 
 The buyer policy is created per-episode in :meth:`setup_state` and stored
-in ``state["buyer_policy"]``.  It is injected into tool functions that
-need it via :meth:`update_tool_args`.  Buyer LLM failures are isolated
-from seller scoring — they never produce ``invalid_action`` penalties.
+as ``state["buyer_llm"]``. It is injected into tool functions that need it
+via :meth:`update_tool_args`. Buyer LLM failures are isolated from seller
+scoring — they never produce ``invalid_action`` penalties.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ import verifiers as vf
 from config import EpisodeConfig
 from dataset import build_salesbench_dataset
 from policy import LLMBuyerPolicy
-from rewards import DEFAULT_REWARD_WEIGHTS, RUBRIC_FUNCS, RUBRIC_WEIGHTS, build_rubric
+from rewards import DEFAULT_REWARD_WEIGHTS, build_rubric
 from runtime import SalesEpisodeRuntime
 from tools import ALL_TOOLS
 
@@ -121,7 +121,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         )
 
         for tool in ALL_TOOLS:
-            self.add_tool(tool, args_to_skip=["runtime", "messages", "buyer_policy"])
+            self.add_tool(tool, args_to_skip=["runtime", "messages", "buyer_llm"])
 
     # ------------------------------------------------------------------
     # State setup
@@ -141,7 +141,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         runtime = SalesEpisodeRuntime(config=config)
 
         # Buyer LLM — separate participant, NOT inside runtime
-        buyer_policy = LLMBuyerPolicy(
+        buyer_llm = LLMBuyerPolicy(
             model=self.buyer_model,
             base_url=self.buyer_base_url,
             api_key=os.getenv(self.buyer_api_key_var, ""),
@@ -149,7 +149,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         )
 
         state["runtime"] = runtime
-        state["buyer_policy"] = buyer_policy
+        state["buyer_llm"] = buyer_llm
         state["episode_config"] = config.to_dict()
         state["episode_seed"] = config.seed
         logger.info(
@@ -195,7 +195,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
         updated["runtime"] = runtime
         if tool_name == "calling_propose_offer":
             updated["messages"] = messages
-            updated["buyer_policy"] = state.get("buyer_policy")
+            updated["buyer_llm"] = state.get("buyer_llm")
         return updated
 
     # ------------------------------------------------------------------
@@ -298,14 +298,14 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
 
     async def _get_buyer_conversation_reply(
         self,
-        buyer_policy: LLMBuyerPolicy,
+        buyer_llm: LLMBuyerPolicy,
         lead: Any,
         agent_text: str,
         messages: list | None,
     ) -> str | None:
         """Get a buyer conversation reply with error isolation."""
         try:
-            result = buyer_policy.generate_response(
+            result = buyer_llm.generate_response(
                 lead=lead, agent_message=agent_text, messages=messages,
             )
             if inspect.isawaitable(result):
@@ -331,7 +331,7 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
             tool_results = await super().env_response(messages, state, **kwargs)
 
             runtime: SalesEpisodeRuntime | None = state.get("runtime")
-            buyer_policy = state.get("buyer_policy")
+            buyer_llm = state.get("buyer_llm")
             if runtime:
                 # Inject buyer spoken response after propose_offer decisions
                 if runtime._pending_buyer_speech:
@@ -342,13 +342,13 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
                     ]
                 # Generate buyer conversation response when agent sent
                 # text alongside tool calls during an active call
-                elif runtime.active_call and not runtime.done and buyer_policy:
+                elif runtime.active_call and not runtime.done and buyer_llm:
                     agent_text = str(last_msg.get("content", "")).strip()
                     if agent_text:
                         lead = runtime.advance_conversation(agent_text)
                         if lead:
                             buyer_reply = await self._get_buyer_conversation_reply(
-                                buyer_policy, lead, agent_text, messages,
+                                buyer_llm, lead, agent_text, messages,
                             )
                             if buyer_reply:
                                 tool_results = list(tool_results) + [
@@ -359,14 +359,14 @@ class SalesBenchPrimeRLEnv(vf.StatefulToolEnv):
 
         # Plain text from agent — inject buyer response if in a call
         runtime = state.get("runtime")
-        buyer_policy = state.get("buyer_policy")
-        if runtime and not runtime.done and runtime.active_call and buyer_policy:
+        buyer_llm = state.get("buyer_llm")
+        if runtime and not runtime.done and runtime.active_call and buyer_llm:
             agent_text = str(last_msg.get("content", "")).strip()
             if agent_text:
                 lead = runtime.advance_conversation(agent_text)
                 if lead:
                     buyer_reply = await self._get_buyer_conversation_reply(
-                        buyer_policy, lead, agent_text, messages,
+                        buyer_llm, lead, agent_text, messages,
                     )
                     if buyer_reply:
                         return [{"role": "user", "content": f"[{lead.full_name} (buyer)]: {buyer_reply}"}]

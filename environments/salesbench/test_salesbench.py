@@ -18,11 +18,9 @@ from models import (
     BuyerArchetype,
     BuyerDecision,
     CallSession,
-    DecisionResult,
     Lead,
     LeadStatus,
     LeadTemperature,
-    Offer,
     PlanType,
     RiskClass,
     RuntimeActionError,
@@ -918,7 +916,7 @@ class TestBuyerErrorIsolation:
             next_step="sign",
             term_years=20,
             messages=None,
-            buyer_policy=FailingPolicy(),
+            buyer_llm=FailingPolicy(),
         ))
 
         import json
@@ -947,7 +945,7 @@ class TestBuyerErrorIsolation:
             next_step="sign",
             term_years=20,
             messages=None,
-            buyer_policy=None,
+            buyer_llm=None,
         ))
 
         import json
@@ -986,7 +984,7 @@ class TestBuyerMetricAccess:
         from policy import LLMBuyerPolicy
         from rewards import metric_buyer_llm_call_count
 
-        # Simulate a state with buyer_policy in state (not runtime)
+        # Simulate a state with buyer_llm in state (not runtime)
         class FakeLLMPolicy(LLMBuyerPolicy):
             def __init__(self):
                 self.call_count = 5
@@ -995,7 +993,7 @@ class TestBuyerMetricAccess:
                 self.total_latency = 10.0
                 self.max_latency = 3.5
 
-        state = {"runtime": _make_runtime(), "buyer_policy": FakeLLMPolicy()}
+        state = {"runtime": _make_runtime(), "buyer_llm": FakeLLMPolicy()}
         result = self._run(metric_buyer_llm_call_count(state))
         assert result == 5.0
 

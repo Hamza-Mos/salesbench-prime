@@ -2,7 +2,7 @@
 
 Tools are thin wrappers around :class:`SalesEpisodeRuntime` methods.  All
 tools are deterministic except ``calling_propose_offer`` which delegates to
-the buyer policy (injected by the orchestrator via ``update_tool_args``).
+the buyer LLM (injected by the orchestrator via ``update_tool_args``).
 Buyer LLM failures are isolated — they produce a deterministic REJECT
 fallback instead of penalizing the seller with an ``invalid_action``.
 """
@@ -144,11 +144,11 @@ async def calling_propose_offer(
     next_step: str,
     term_years: int | None = None,
     messages: list | None = None,
-    buyer_policy: Any = None,
+    buyer_llm: Any = None,
 ) -> str:
     """Propose an offer to the buyer. Decisions: ACCEPT, REJECT, or HANG_UP. Quote first.
 
-    This is the only tool that involves a buyer LLM call.  The buyer policy is
+    This is the only tool that involves a buyer LLM call. The buyer LLM is
     injected by the orchestrator (``update_tool_args``).  Buyer failures produce
     a deterministic REJECT — the seller is never penalized for buyer errors.
     """
@@ -181,7 +181,7 @@ async def calling_propose_offer(
 
     # --- Step 2: Buyer evaluation (buyer errors → fallback, NOT seller penalty) ---
     try:
-        decision_or_coro = buyer_policy.evaluate_offer(
+        decision_or_coro = buyer_llm.evaluate_offer(
             lead=lead, offer=offer, messages=messages,
         )
         if inspect.isawaitable(decision_or_coro):

@@ -182,7 +182,7 @@ async def metric_context_summary_count(state: dict[str, Any]) -> float:
 def _get_llm_policy(state: dict[str, Any]):
     """Return the LLMBuyerPolicy from state, or None."""
     from policy import LLMBuyerPolicy
-    policy = state.get("buyer_policy")
+    policy = state.get("buyer_llm")
     return policy if isinstance(policy, LLMBuyerPolicy) else None
 
 
