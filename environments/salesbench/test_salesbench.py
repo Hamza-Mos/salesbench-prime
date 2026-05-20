@@ -47,6 +47,20 @@ def _make_runtime(**overrides) -> SalesEpisodeRuntime:
     return SalesEpisodeRuntime(config=_make_config(**overrides))
 
 
+def _quote_term_offer(
+    runtime: SalesEpisodeRuntime,
+    lead_id: str,
+    coverage_amount: int = 500_000,
+    term_years: int | None = 20,
+) -> dict:
+    return runtime.quote_plan(
+        lead_id=lead_id,
+        plan_type="TERM",
+        coverage_amount=coverage_amount,
+        term_years=term_years,
+    )
+
+
 def _make_test_lead(**overrides) -> Lead:
     defaults = dict(
         lead_id="test_001",
@@ -185,24 +199,19 @@ class TestRuntimeStateTransitions:
         assert rt.active_call is not None
 
         # Quote before propose (env constraint, v0.24.2+).
-        rt.quote_plan(
-            lead_id=lead_id,
-            plan_type="TERM",
-            coverage_amount=500_000,
-            term_years=20,
-        )
+        quote = _quote_term_offer(rt, lead_id)
 
         # Record offer (deterministic — no buyer LLM)
         offer_result = rt.record_offer(
             plan_type="TERM",
             coverage_amount=500_000,
-            monthly_premium=50.0,
+            monthly_premium=quote["premium"],
             next_step="sign",
             term_years=20,
         )
         assert "offer" in offer_result
         assert "lead" in offer_result
-        assert offer_result["offer"].monthly_premium == 50.0
+        assert offer_result["offer"].monthly_premium == quote["premium"]
 
         # Apply buyer decision (deterministic state update)
         decision_result = rt.apply_buyer_decision(
@@ -223,12 +232,12 @@ class TestRuntimeStateTransitions:
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
-        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
+        quote = _quote_term_offer(rt, lead_id)
 
         rt.record_offer(
             plan_type="TERM",
             coverage_amount=500_000,
-            monthly_premium=50.0,
+            monthly_premium=quote["premium"],
             next_step="sign",
             term_years=20,
         )
@@ -241,17 +250,52 @@ class TestRuntimeStateTransitions:
         assert "suggested_adjustments" in result
         assert rt.stats.rejected_offers == 1
 
+    def test_record_offer_requires_exact_quoted_offer(self):
+        rt = _make_runtime()
+        lead_id = list(rt.leads.keys())[0]
+        rt.start_call(lead_id=lead_id)
+        quote = _quote_term_offer(rt, lead_id)
+
+        with pytest.raises(RuntimeActionError, match="quote this exact offer"):
+            rt.record_offer(
+                plan_type="TERM",
+                coverage_amount=500_000,
+                monthly_premium=quote["premium"] + 1,
+                next_step="sign",
+                term_years=20,
+            )
+
+        assert rt.stats.offers_proposed == 0
+        assert rt.active_call is not None
+        assert rt.active_call.offers == []
+
+    def test_record_offer_matches_default_term_quote(self):
+        rt = _make_runtime()
+        lead_id = list(rt.leads.keys())[0]
+        rt.start_call(lead_id=lead_id)
+        quote = _quote_term_offer(rt, lead_id, term_years=None)
+
+        result = rt.record_offer(
+            plan_type="TERM",
+            coverage_amount=500_000,
+            monthly_premium=quote["premium"],
+            next_step="sign",
+            term_years=None,
+        )
+
+        assert result["offer"].term_years == 20
+
     def test_record_offer_hang_up_dnc(self):
         """HANG_UP with DNC request finalizes call and marks lead DNC."""
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
-        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
+        quote = _quote_term_offer(rt, lead_id)
 
         rt.record_offer(
             plan_type="TERM",
             coverage_amount=500_000,
-            monthly_premium=50.0,
+            monthly_premium=quote["premium"],
             next_step="sign",
             term_years=20,
         )
@@ -303,13 +347,13 @@ class TestRuntimeStateTransitions:
         rt = _make_runtime(total_hours=1)  # 60 min
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
-        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
+        quote = _quote_term_offer(rt, lead_id)
         rt.current_minute = rt.config.max_minutes - 1  # 1 min left, propose costs 4
 
         result = rt.record_offer(
             plan_type="TERM",
             coverage_amount=500_000,
-            monthly_premium=50.0,
+            monthly_premium=quote["premium"],
             next_step="sign",
             term_years=20,
         )
@@ -756,19 +800,19 @@ class TestSeparationOfConcerns:
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
-        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
+        quote = _quote_term_offer(rt, lead_id)
         time_before = rt.current_minute
 
         result = rt.record_offer(
             plan_type="TERM",
             coverage_amount=500_000,
-            monthly_premium=50.0,
+            monthly_premium=quote["premium"],
             next_step="sign",
             term_years=20,
         )
 
         # Offer recorded
-        assert rt.active_call.offers[-1].monthly_premium == 50.0
+        assert rt.active_call.offers[-1].monthly_premium == quote["premium"]
         assert rt.stats.offers_proposed == 1
         # Time advanced
         assert rt.current_minute == time_before + rt.config.tool_costs.propose_offer_minutes
@@ -781,11 +825,11 @@ class TestSeparationOfConcerns:
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
-        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
+        quote = _quote_term_offer(rt, lead_id)
         rt.record_offer(
             plan_type="TERM",
             coverage_amount=500_000,
-            monthly_premium=50.0,
+            monthly_premium=quote["premium"],
             next_step="sign",
             term_years=20,
         )
@@ -797,7 +841,7 @@ class TestSeparationOfConcerns:
         )
 
         assert rt.stats.conversions == 1
-        assert rt.stats.revenue_mrr == 50.0
+        assert rt.stats.revenue_mrr == quote["premium"]
         assert rt.leads[lead_id].status == LeadStatus.CONVERTED
         assert result["decision"]["decision"] == "accept"
 
@@ -820,11 +864,11 @@ class TestSeparationOfConcerns:
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
-        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
+        quote = _quote_term_offer(rt, lead_id)
         rt.record_offer(
             plan_type="TERM",
             coverage_amount=500_000,
-            monthly_premium=50.0,
+            monthly_premium=quote["premium"],
             next_step="sign",
             term_years=20,
         )
@@ -900,7 +944,7 @@ class TestBuyerErrorIsolation:
         rt = _make_runtime()
         lead_id = list(rt.leads.keys())[0]
         rt.start_call(lead_id=lead_id)
-        rt.quote_plan(lead_id=lead_id, plan_type="TERM", coverage_amount=500_000, term_years=20)
+        quote = _quote_term_offer(rt, lead_id)
 
         invalid_before = rt.stats.invalid_actions
 
@@ -912,7 +956,7 @@ class TestBuyerErrorIsolation:
             runtime=rt,
             plan_type="TERM",
             coverage_amount=500_000,
-            monthly_premium=50.0,
+            monthly_premium=quote["premium"],
             next_step="sign",
             term_years=20,
             messages=None,
