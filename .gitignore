@@ -7,6 +7,8 @@ environments/*/outputs/
 **/__pycache__/
 **/*.pyc
 
+.DS_Store
+
 # Build artifacts from `prime env push` / `uv build`
 environments/*/dist/
 environments/*/dist/*
