@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.9)  30 MAY 2026 10:10
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.1.9)  30 MAY 2026 12:40
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1045,23 +1045,21 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             See the microtype manual for details.
 
 [5{/usr/local/texlive/2024/texmf-dist/fonts/enc/dvips/inconsolata/i4-ot1-0.enc}
-]
-Package pgfplots info on input line 409: Using 'lua backend=false' for axis: x 
-coord trafo unsupported.
- [6] [7]
-Package pgfplots info on input line 546: Using 'lua backend=false' for axis: x 
-coord trafo unsupported.
- [8] (./salesbench_wab.bbl [9] [10] [11]) [12] [13]
+] [6] [7]
+Underfull \vbox (badness 3568) has occurred while \output is active []
+
+ [8]
+(./salesbench_wab.bbl [9] [10] [11]) [12] [13]
 LaTeX Font Info:    Font shape `OT1/zi4/m/n' will be
-(Font)              scaled to size 7.0pt on input line 751.
+(Font)              scaled to size 7.0pt on input line 754.
 LaTeX Font Info:    Trying to load font information for TS1+zi4 on input line 7
-55.
+58.
 
 (/usr/local/texlive/2024/texmf-dist/tex/latex/inconsolata/ts1zi4.fd
 File: ts1zi4.fd 2018/01/14 TS1/zi4 (Inconsolata)
 )
 LaTeX Font Info:    Font shape `TS1/zi4/m/n' will be
-(Font)              scaled to size 7.0pt on input line 755.
+(Font)              scaled to size 7.0pt on input line 758.
 Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `zi4' (encoding: TS1).
 (microtype)             For optimal results, create family-specific settings.
@@ -1077,13 +1075,13 @@ Package rerunfilecheck Info: File `salesbench_wab.out' has not changed.
 (rerunfilecheck)             Checksum: 8828D1AB1BBA9D69930E75974B2677C8;5438.
  ) 
 Here is how much of TeX's memory you used:
- 37181 strings out of 474116
- 832841 string characters out of 5743683
+ 37146 strings out of 474116
+ 831849 string characters out of 5743683
  2325187 words of memory out of 5000000
- 58276 multiletter control sequences out of 15000+600000
- 618495 words of font info for 476 fonts, out of 8000000 for 9000
+ 58241 multiletter control sequences out of 15000+600000
+ 618608 words of font info for 476 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 84i,21n,87p,1042b,2828s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 84i,19n,87p,1042b,2801s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/local/texlive/2024/texmf-dist/fonts/type1/public/inconsolata/Inconsolat
 a-zi4r.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/c
 mmi10.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cm
@@ -1094,10 +1092,10 @@ r10.pfb></usr/local/texlive/2024/texmf-dist/fonts/type1/public/amsfonts/cm/cmss
 r/local/texlive/2024/texmf-dist/fonts/type1/urw/palatino/uplb8a.pfb></usr/local
 /texlive/2024/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb></usr/local/texliv
 e/2024/texmf-dist/fonts/type1/urw/palatino/uplri8a.pfb>
-Output written on salesbench_wab.pdf (15 pages, 227316 bytes).
+Output written on salesbench_wab.pdf (15 pages, 226795 bytes).
 PDF statistics:
- 578 PDF objects out of 1000 (max. 8388607)
- 525 compressed objects within 6 object streams
+ 580 PDF objects out of 1000 (max. 8388607)
+ 526 compressed objects within 6 object streams
  125 named destinations out of 1000 (max. 500000)
  78581 words of extra memory for PDF output out of 89155 (max. 10000000)
 
