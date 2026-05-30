@@ -1,0 +1,140 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{liu2024agentbench,mialon2024gaia}
+\citation{park2023generative,zhou2024sotopia,pan2023machiavelli}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\citation{liu2024agentbench}
+\citation{mialon2024gaia}
+\citation{qin2024toolllm}
+\citation{patil2024gorilla}
+\citation{zhou2024webarena,jimenez2024swebench,xu2024theagentcompany}
+\citation{ma2024agentboard}
+\citation{park2023generative}
+\citation{vezhnevets2023concordia}
+\citation{zhou2024sotopia}
+\citation{pan2023machiavelli}
+\citation{perez2022discovering}
+\citation{sharma2024sycophancy}
+\citation{yao2024taubench,barres2025tau2bench}
+\citation{lewis2017deal,wang2019persuasion,bakhtin2022cicero}
+\citation{backlund2025vending}
+\citation{shao2024deepseekmath,lambert2024tulu3}
+\citation{shao2024deepseekmath}
+\citation{bengio2009curriculum}
+\citation{pan2022reward,skalse2022reward,krakovna2020specification,pan2024feedback}
+\citation{brown2025verifiers}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related work}{3}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Agentic and tool-use benchmarks.}{3}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Agent behavior and social simulation.}{3}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Agent-to-agent and tool-agent-user simulation.}{3}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Long-horizon, budgeted agents.}{3}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Reinforcement learning and behavioral intervention.}{3}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}The \textsc  {SalesBench}{} environment}{3}{section.3}\protected@file@percent }
+\newlabel{sec:env}{{3}{3}{The \salesbench {} environment}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Task and objective}{3}{subsection.3.1}\protected@file@percent }
+\citation{barres2025tau2bench}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Three-party orchestration (the released harness). The seller agent talks only to the orchestrator, exchanging tool calls and observations. The orchestrator applies validated actions to a deterministic runtime and routes proposed offers to a buyer language model, then injects the buyer's decision and speech back into the conversation. Seller errors are penalized and increment the invalid-action counter; buyer-model failures are isolated and resolve to a benign rejection (\S  \ref {sec:attribution}).}}{4}{figure.1}\protected@file@percent }
+\newlabel{fig:orchestration}{{1}{4}{Three-party orchestration (the released harness). The seller agent talks only to the orchestrator, exchanging tool calls and observations. The orchestrator applies validated actions to a deterministic runtime and routes proposed offers to a buyer language model, then injects the buyer's decision and speech back into the conversation. Seller errors are penalized and increment the invalid-action counter; buyer-model failures are isolated and resolve to a benign rejection (\S \ref {sec:attribution})}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Three-party orchestration}{4}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Leads, archetypes, and pricing}{4}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:leads}{{3.3}{4}{Leads, archetypes, and pricing}{subsection.3.3}{}}
+\citation{liu2024lostmiddle}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Tools and the canonical workflow}{5}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Reward}{5}{subsection.3.5}\protected@file@percent }
+\newlabel{sec:reward}{{3.5}{5}{Reward}{subsection.3.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Failure attribution}{5}{subsection.3.6}\protected@file@percent }
+\newlabel{sec:attribution}{{3.6}{5}{Failure attribution}{subsection.3.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7}Behavioral instrumentation}{5}{subsection.3.7}\protected@file@percent }
+\newlabel{sec:instrumentation}{{3.7}{5}{Behavioral instrumentation}{subsection.3.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.8}Context management for long horizons}{5}{subsection.3.8}\protected@file@percent }
+\newlabel{sec:context}{{3.8}{5}{Context management for long horizons}{subsection.3.8}{}}
+\citation{shao2024deepseekmath}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments}{6}{section.4}\protected@file@percent }
+\newlabel{sec:experiments}{{4}{6}{Experiments}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Setup}{6}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Main results}{6}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:main}{{4.2}{6}{Main results}{subsection.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Learning dynamics: interface, then skill}{6}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:dynamics}{{4.3}{6}{Learning dynamics: interface, then skill}{subsection.4.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Model performance: per-lead conversion at 50 and 100 leads (64 episodes per cell; error bars are $\pm 1$ SEM). The leftmost pair is the \emph  {untrained} base on the \textsc  {Default} buyer; the remaining four are the \emph  {trained} agent evaluated against each buyer-prompt variant, where \textsc  {Default} is the only buyer seen in training. Doubling the pipeline lowers every setting, but the trained policy stays well above the untrained base and holds $7.9\text  {--}19.7\%$ conversion across all four buyer styles. The ratio over the base rises from ${\sim }21\times $ at 50 leads to ${\sim }50\times $ at 100 because the trained burst is bounded while the near-zero baseline collapses faster (\S  \ref {sec:behavior}).}}{7}{figure.2}\protected@file@percent }
+\newlabel{fig:scaling}{{2}{7}{Model performance: per-lead conversion at 50 and 100 leads (64 episodes per cell; error bars are $\pm 1$ SEM). The leftmost pair is the \emph {untrained} base on the \textsc {Default} buyer; the remaining four are the \emph {trained} agent evaluated against each buyer-prompt variant, where \textsc {Default} is the only buyer seen in training. Doubling the pipeline lowers every setting, but the trained policy stays well above the untrained base and holds $7.9\text {--}19.7\%$ conversion across all four buyer styles. The ratio over the base rises from ${\sim }21\times $ at 50 leads to ${\sim }50\times $ at 100 because the trained burst is bounded while the near-zero baseline collapses faster (\S \ref {sec:behavior})}{figure.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Evaluation matrix on \textsc  {SalesBench}{} (64 episodes per cell, one rollout each; $\pm $ is one SEM, $\mathrm  {SD}/\sqrt  {64}$, shown for reward and conv/lead). conv/lead: per-lead conversion rate; mrr-cap: captured fraction of maximum achievable MRR; done: fraction of episodes reaching a controlled runtime stop (vs.\ erroring out). The trained agent is trained only against the \textsc  {Default} buyer; \textsc  {Skeptical}, \textsc  {Impulsive}, and \textsc  {Analytical} are unseen. The trained--untrained gap and the gaps between buyer variants (e.g.\ \textsc  {Default} vs.\ \textsc  {Skeptical} at 100 leads) both exceed several SEM. As \S  \ref {sec:behavior} shows, the controlled stop counted by ``done'' is dominated by the invalid-action ceiling, not time or pipeline exhaustion.}}{7}{table.1}\protected@file@percent }
+\newlabel{tab:matrix}{{1}{7}{Evaluation matrix on \salesbench {} (64 episodes per cell, one rollout each; $\pm $ is one SEM, $\mathrm {SD}/\sqrt {64}$, shown for reward and conv/lead). conv/lead: per-lead conversion rate; mrr-cap: captured fraction of maximum achievable MRR; done: fraction of episodes reaching a controlled runtime stop (vs.\ erroring out). The trained agent is trained only against the \textsc {Default} buyer; \textsc {Skeptical}, \textsc {Impulsive}, and \textsc {Analytical} are unseen. The trained--untrained gap and the gaps between buyer variants (e.g.\ \textsc {Default} vs.\ \textsc {Skeptical} at 100 leads) both exceed several SEM. As \S \ref {sec:behavior} shows, the controlled stop counted by ``done'' is dominated by the invalid-action ceiling, not time or pipeline exhaustion}{table.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Agent behavior at scale: a brittleness signature}{7}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:behavior}{{4.4}{7}{Agent behavior at scale: a brittleness signature}{subsection.4.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Behavioral decomposition at 100 leads (means over 64 episodes; same runs as Table~\ref {tab:matrix}). conv.: absolute conversions; offers: offers proposed; invalid: mean invalid actions per episode (ceiling $=12$); time-util: fraction of the 3000-minute budget used; coverage: fraction of the lead pool contacted; inv-cap stop: fraction of episodes terminating on the invalid-action ceiling (equal to ``done'' here, since no episode exhausts time or pipeline). The trained agent converts a productive burst and then trips the error ceiling at ${\sim }11\%$ time utilization. The binding budget is mistakes, not time. Note the buyer-dependent offer$\rightarrow $accept efficiency: against \textsc  {Impulsive} the agent converts $19.7$ of $27.2$ offers ($72\%$), but against \textsc  {Skeptical} only $7.9$ of $46.6$ ($17\%$): it throws far more offers at the harder buyer and converts fewer.}}{8}{table.2}\protected@file@percent }
+\newlabel{tab:behavior}{{2}{8}{Behavioral decomposition at 100 leads (means over 64 episodes; same runs as Table~\ref {tab:matrix}). conv.: absolute conversions; offers: offers proposed; invalid: mean invalid actions per episode (ceiling $=12$); time-util: fraction of the 3000-minute budget used; coverage: fraction of the lead pool contacted; inv-cap stop: fraction of episodes terminating on the invalid-action ceiling (equal to ``done'' here, since no episode exhausts time or pipeline). The trained agent converts a productive burst and then trips the error ceiling at ${\sim }11\%$ time utilization. The binding budget is mistakes, not time. Note the buyer-dependent offer$\rightarrow $accept efficiency: against \textsc {Impulsive} the agent converts $19.7$ of $27.2$ offers ($72\%$), but against \textsc {Skeptical} only $7.9$ of $46.6$ ($17\%$): it throws far more offers at the harder buyer and converts fewer}{table.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Brittleness signature at 100 leads (\textsc  {Default} buyer; the means are from Table~\ref {tab:behavior}). Of the three budgets that can end an episode, the trained agent barely touches \emph  {time} ($11\%$) or \emph  {pipeline coverage} ($20\%$) but drives the \emph  {mistake budget} to $96\%$ of its 12-action ceiling: episodes end on accumulated invalid actions, not on running out of time or leads. The untrained base reads lower on every budget because it crashes on serving errors before reaching any ceiling (it fails to reach a controlled stop in nearly half its episodes, Table~\ref {tab:matrix}).}}{8}{figure.3}\protected@file@percent }
+\newlabel{fig:brittle}{{3}{8}{Brittleness signature at 100 leads (\textsc {Default} buyer; the means are from Table~\ref {tab:behavior}). Of the three budgets that can end an episode, the trained agent barely touches \emph {time} ($11\%$) or \emph {pipeline coverage} ($20\%$) but drives the \emph {mistake budget} to $96\%$ of its 12-action ceiling: episodes end on accumulated invalid actions, not on running out of time or leads. The untrained base reads lower on every budget because it crashes on serving errors before reaching any ceiling (it fails to reach a controlled stop in nearly half its episodes, Table~\ref {tab:matrix})}{figure.3}{}}
+\citation{pan2022reward,skalse2022reward,krakovna2020specification,gao2023scaling}
+\bibdata{salesbench}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Scaling and counterparty-style generalization}{9}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:scaling}{{4.5}{9}{Scaling and counterparty-style generalization}{subsection.4.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Discussion}{9}{section.5}\protected@file@percent }
+\newlabel{sec:discussion}{{5}{9}{Discussion}{section.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{What \textsc  {SalesBench}{} measures that single-trajectory benchmarks do not.}{9}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Reward design is fragile under RL.}{9}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The pattern is portable.}{9}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Limitations and next steps.}{9}{section*.9}\protected@file@percent }
+\bibcite{backlund2025vending}{{1}{2025}{{Backlund \& Petersson}}{{Backlund and Petersson}}}
+\bibcite{barres2025tau2bench}{{2}{2025}{{Barres et~al.}}{{Barres, Dong, Ray, Si, and Narasimhan}}}
+\bibcite{bengio2009curriculum}{{3}{2009}{{Bengio et~al.}}{{Bengio, Louradour, Collobert, and Weston}}}
+\bibcite{brown2025verifiers}{{4}{2025}{{Brown}}{{}}}
+\bibcite{gao2023scaling}{{5}{2023}{{Gao et~al.}}{{Gao, Schulman, and Hilton}}}
+\bibcite{jimenez2024swebench}{{6}{2024}{{Jimenez et~al.}}{{Jimenez, Yang, Wettig, Yao, Pei, Press, and Narasimhan}}}
+\bibcite{krakovna2020specification}{{7}{2020}{{Krakovna et~al.}}{{Krakovna, Uesato, Mikulik, Rahtz, Everitt, Kumar, Kenton, Leike, and Legg}}}
+\bibcite{lambert2024tulu3}{{8}{2024}{{Lambert et~al.}}{{Lambert, Morrison, Pyatkin, Huang, Ivison, Brahman, Miranda, Liu, Dziri, Lyu, et~al.}}}
+\bibcite{lewis2017deal}{{9}{2017}{{Lewis et~al.}}{{Lewis, Yarats, Dauphin, Parikh, and Batra}}}
+\bibcite{liu2024lostmiddle}{{10}{2024{a}}{{Liu et~al.}}{{Liu, Lin, Hewitt, Paranjape, Bevilacqua, Petroni, and Liang}}}
+\bibcite{liu2024agentbench}{{11}{2024{b}}{{Liu et~al.}}{{Liu, Yu, Zhang, Xu, Lei, Lai, Gu, Ding, Men, Yang, et~al.}}}
+\bibcite{ma2024agentboard}{{12}{2024}{{Ma et~al.}}{{Ma, Zhang, Zhu, Yang, Yang, Jin, Lan, Kong, and He}}}
+\bibcite{bakhtin2022cicero}{{13}{2022}{{{Meta Fundamental AI Research Diplomacy Team (FAIR)} et~al.}}{{{Meta Fundamental AI Research Diplomacy Team (FAIR)}, Bakhtin, Brown, Dinan, Farina, Flaherty, Fried, Goff, Gray, Hu, et~al.}}}
+\bibcite{mialon2024gaia}{{14}{2024}{{Mialon et~al.}}{{Mialon, Fourrier, Swift, Wolf, LeCun, and Scialom}}}
+\bibcite{pan2022reward}{{15}{2022}{{Pan et~al.}}{{Pan, Bhatia, and Steinhardt}}}
+\bibcite{pan2023machiavelli}{{16}{2023}{{Pan et~al.}}{{Pan, Chan, Zou, Li, Basart, Woodside, Zhang, Emmons, and Hendrycks}}}
+\bibcite{pan2024feedback}{{17}{2024}{{Pan et~al.}}{{Pan, Jones, Jagadeesan, and Steinhardt}}}
+\bibcite{park2023generative}{{18}{2023}{{Park et~al.}}{{Park, O'Brien, Cai, Morris, Liang, and Bernstein}}}
+\bibcite{patil2024gorilla}{{19}{2024}{{Patil et~al.}}{{Patil, Zhang, Wang, and Gonzalez}}}
+\bibcite{perez2022discovering}{{20}{2022}{{Perez et~al.}}{{Perez, Ringer, Luko{\v {s}}i{\=u}t{\.e}, Nguyen, Chen, Heiner, Pettit, Olsson, Kundu, Kadavath, et~al.}}}
+\bibcite{qin2024toolllm}{{21}{2024}{{Qin et~al.}}{{Qin, Liang, Ye, Zhu, Yan, Lu, Lin, Cong, Tang, Qian, et~al.}}}
+\bibcite{shao2024deepseekmath}{{22}{2024}{{Shao et~al.}}{{Shao, Wang, Zhu, Xu, Song, Bi, Zhang, Zhang, Li, Wu, and Guo}}}
+\bibcite{sharma2024sycophancy}{{23}{2024}{{Sharma et~al.}}{{Sharma, Tong, Korbak, Duvenaud, Askell, Bowman, Cheng, Durmus, Hatfield-Dodds, Johnston, Kravec, Maxwell, McCandlish, Ndousse, Rausch, Schiefer, Yan, Zhang, and Perez}}}
+\bibcite{skalse2022reward}{{24}{2022}{{Skalse et~al.}}{{Skalse, Howe, Krasheninnikov, and Krueger}}}
+\bibcite{vezhnevets2023concordia}{{25}{2023}{{Vezhnevets et~al.}}{{Vezhnevets, Agapiou, Aharon, Ziv, Matyas, Du{\'e}{\~n}ez-Guzm{\'a}n, Cunningham, Osindero, Karmon, and Leibo}}}
+\bibcite{wang2019persuasion}{{26}{2019}{{Wang et~al.}}{{Wang, Shi, Kim, Oh, Yang, Zhang, and Yu}}}
+\bibcite{xu2024theagentcompany}{{27}{2024}{{Xu et~al.}}{{Xu, Song, Li, Tang, Jain, Bao, Wang, Zhou, Guo, Cao, et~al.}}}
+\bibcite{yao2024taubench}{{28}{2024}{{Yao et~al.}}{{Yao, Shinn, Razavi, and Narasimhan}}}
+\bibcite{zhou2024webarena}{{29}{2024{a}}{{Zhou et~al.}}{{Zhou, Xu, Zhu, Zhou, Lo, Sridhar, Cheng, Ou, Bisk, Fried, Alon, and Neubig}}}
+\bibcite{zhou2024sotopia}{{30}{2024{b}}{{Zhou et~al.}}{{Zhou, Zhu, Mathur, Zhang, Yu, Qi, Morency, Bisk, Fried, Neubig, and Sap}}}
+\bibstyle{colm2026_conference}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Appendix}{12}{appendix.A}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Reproducibility and ethics}{12}{subsection.A.1}\protected@file@percent }
+\newlabel{app:statements}{{A.1}{12}{Reproducibility and ethics}{subsection.A.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Reward specification}{12}{subsection.A.2}\protected@file@percent }
+\newlabel{app:reward}{{A.2}{12}{Reward specification}{subsection.A.2}{}}
+\citation{brown2025verifiers}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.3}Behavioral instruments and logged metrics}{13}{subsection.A.3}\protected@file@percent }
+\newlabel{app:metrics}{{A.3}{13}{Behavioral instruments and logged metrics}{subsection.A.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.4}Orchestration, hidden arguments, and context summarization}{13}{subsection.A.4}\protected@file@percent }
+\newlabel{app:context}{{A.4}{13}{Orchestration, hidden arguments, and context summarization}{subsection.A.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.5}Tools and pricing model}{13}{subsection.A.5}\protected@file@percent }
+\newlabel{app:pricing}{{A.5}{13}{Tools and pricing model}{subsection.A.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.6}Buyer-prompt variants}{13}{subsection.A.6}\protected@file@percent }
+\newlabel{app:buyervariants}{{A.6}{13}{Buyer-prompt variants}{subsection.A.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.7}Curriculum and training setup}{14}{subsection.A.7}\protected@file@percent }
+\newlabel{app:training}{{A.7}{14}{Curriculum and training setup}{subsection.A.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Training hyperparameters, shared across all four curriculum stages. Only the first stage trains from scratch; each later stage warm-starts from the previous checkpoint.}}{14}{table.3}\protected@file@percent }
+\newlabel{tab:hparams}{{3}{14}{Training hyperparameters, shared across all four curriculum stages. Only the first stage trains from scratch; each later stage warm-starts from the previous checkpoint}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.8}Example rollouts}{14}{subsection.A.8}\protected@file@percent }
+\newlabel{app:traces}{{A.8}{14}{Example rollouts}{subsection.A.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.9}Preliminary external-model sweep}{14}{subsection.A.9}\protected@file@percent }
+\newlabel{app:apisweep}{{A.9}{14}{Preliminary external-model sweep}{subsection.A.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.10}Determinism, distribution, and pricing checks}{14}{subsection.A.10}\protected@file@percent }
+\newlabel{app:determinism}{{A.10}{14}{Determinism, distribution, and pricing checks}{subsection.A.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Representative rollouts at three points in training, abridged from real training and evaluation logs. \textbf  {(a)} The untrained base fails the tool \emph  {interface} before it can sell, consistent with its $0.013$ per-lead conversion in Table~\ref {tab:matrix}. \textbf  {(b)} After ${\sim }50$ steps of the 2-lead stage the agent drives the tool loop cleanly (one search, a quote before every offer) yet closes nothing, re-pricing the same plan when the buyer's objection is about information rather than price. \textbf  {(c)} The trained policy discovers, quotes once, and closes; this discover-quote-close burst is what produces the ${\sim }18$ conversions per 100-lead episode in Table~\ref {tab:behavior}. The traces line up with the aggregate metrics: tool fluency precedes selling skill.}}{15}{figure.4}\protected@file@percent }
+\newlabel{fig:trace}{{4}{15}{Representative rollouts at three points in training, abridged from real training and evaluation logs. \textbf {(a)} The untrained base fails the tool \emph {interface} before it can sell, consistent with its $0.013$ per-lead conversion in Table~\ref {tab:matrix}. \textbf {(b)} After ${\sim }50$ steps of the 2-lead stage the agent drives the tool loop cleanly (one search, a quote before every offer) yet closes nothing, re-pricing the same plan when the buyer's objection is about information rather than price. \textbf {(c)} The trained policy discovers, quotes once, and closes; this discover-quote-close burst is what produces the ${\sim }18$ conversions per 100-lead episode in Table~\ref {tab:behavior}. The traces line up with the aggregate metrics: tool fluency precedes selling skill}{figure.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Preliminary external-model sweep: composite reward on \textsc  {SalesBench}{} (\textsc  {Default} buyer). Single episode per cell ($n{=}1$, no error bars) through an OpenRouter API harness, except $^{\dagger }$ the trained Qwen3.5-2B adapter, which is the 64-episode result from Table~\ref {tab:matrix} shown for reference. This is a coarse external read, not a controlled comparison: a single seed has no statistical power and the serving harness materially affects the score (see text). We do not draw a leaderboard from it.}}{15}{table.4}\protected@file@percent }
+\newlabel{tab:apisweep}{{4}{15}{Preliminary external-model sweep: composite reward on \salesbench {} (\textsc {Default} buyer). Single episode per cell ($n{=}1$, no error bars) through an OpenRouter API harness, except $^{\dagger }$ the trained Qwen3.5-2B adapter, which is the 64-episode result from Table~\ref {tab:matrix} shown for reference. This is a coarse external read, not a controlled comparison: a single seed has no statistical power and the serving harness materially affects the score (see text). We do not draw a leaderboard from it}{table.4}{}}
+\gdef \@abspage@last{15}

@@ -648,10 +648,36 @@ class SalesEpisodeRuntime:
                 "leads_exhausted": status_counts.get("exhausted", 0),
                 "leads_remaining": status_counts.get("active", 0),
             },
+            "outcomes": self.outcome_breakdown(),
             "calls": calls_detail,
             "stats": self.stats.to_dict(),
             "converted_leads": [lead.to_detail_dict() for lead in converted],
         }
+
+    def outcome_breakdown(self) -> dict[str, dict[str, dict[str, int]]]:
+        """Per-archetype and per-temperature contact/convert counts.
+
+        Returns ``{"by_archetype": {arch: {total, contacted, converted}},
+        "by_temperature": {temp: {...}}}``.  Pure read over ``self.leads`` —
+        no model calls.  Used by the behavioral-fingerprint metrics in
+        ``rewards.py`` and exported per episode for offline analysis.
+        """
+        by_arch: dict[str, dict[str, int]] = {}
+        by_temp: dict[str, dict[str, int]] = {}
+        for lead in self.leads.values():
+            for key, table in (
+                (lead.archetype.value, by_arch),
+                (lead.temperature.value, by_temp),
+            ):
+                bucket = table.setdefault(
+                    key, {"total": 0, "contacted": 0, "converted": 0}
+                )
+                bucket["total"] += 1
+                if lead.call_count > 0:
+                    bucket["contacted"] += 1
+                if lead.status == LeadStatus.CONVERTED:
+                    bucket["converted"] += 1
+        return {"by_archetype": by_arch, "by_temperature": by_temp}
 
     def _raise_if_done(self) -> None:
         if self.done:

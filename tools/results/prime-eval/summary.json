@@ -1,7 +1,8 @@
 {
   "eval_mechanism": "prime eval run (deployed adapter gjgpwgdb5sh7y2d6epmveh23, base Qwen3.5-2B)",
   "shared_config": {
-    "n_episodes_per_cell": 128,
+    "n_episodes_per_cell": 64,
+    "note_episode_count": "Eval split has 128 seeds; each cell rolled out 64 episodes (run logs say '64 groups, 64 total rollouts'). Reported means/std are over these 64. SEM = std/sqrt(64). The paper uses 64.",
     "rollouts_per_example": 1,
     "max_concurrent": 16,
     "total_hours": 50,
@@ -31,7 +32,7 @@
     "Gap widens at scale: lift over untrained goes from 21x mean at 50 leads to 50x at 100 leads.",
     "Untrained drops 4.3x as leads double (1.3% -> 0.3%); trained drops 1.8x on average.",
     "Trained model holds 7.9-19.7% conv/lead at 100 leads across 4 unseen buyer variants (no overfit to default buyer).",
-    "Skeptical-buyer-at-scale is the failure mode (5x conversion drop vs 1.5-2.2x for others), but still 26x lift over untrained.",
+    "Skeptical is the hardest buyer: lowest absolute conversion (7.9% at 100 leads) and steepest reward collapse (0.133 -> 0.017). Its per-lead conversion drops ~2.0x (0.160 -> 0.079), comparable to the other styles (1.5-2.2x), but still ~26x over untrained. (Earlier '5x drop' was an error.)",
     "Context summarization is essential at 100 leads: 8.5 summaries/episode trained-default; without summarization, 47% of episodes errored on context overflow."
   ]
 }

@@ -6,7 +6,7 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
-from models import BuyerDecision
+from models import BuyerArchetype, BuyerDecision, LeadTemperature
 from runtime import SalesEpisodeRuntime
 
 
@@ -402,7 +402,118 @@ _STATE_METRICS = [
     metric_error_has_body,
 ]
 
-_ALL_METRICS = _GENERATED_METRICS + _STATE_METRICS + _BUYER_LLM_METRICS
+
+# ---------------------------------------------------------------------------
+# Behavioral metrics (zero-weight) — characterize *how* the agent behaves, not
+# just how much it scores.  Added for the agent-behavior analysis: termination
+# attribution, pipeline triage, and per-counterparty conversion fingerprints.
+# All derive from runtime state at episode end; no model calls, no reward impact.
+# ---------------------------------------------------------------------------
+
+
+def _make_termination_metric(name: str, reason: str | None, *, unfinished: bool = False):
+    """Metric = 1.0 if the episode ended for ``reason`` (or, for ``unfinished``,
+    did not reach any runtime termination), else 0.0. Aggregated over a cell,
+    the mean is the *fraction* of episodes ending that way — the honest
+    decomposition of the coarse ``episode_done`` flag.
+    """
+
+    async def fn(state: dict[str, Any]) -> float:
+        rt = _get_runtime(state)
+        if rt is None:
+            return 0.0
+        if unfinished:
+            return 1.0 if not rt.done else 0.0
+        return 1.0 if (rt.done and rt.termination_reason == reason) else 0.0
+
+    fn.__name__ = name
+    fn.__qualname__ = name
+    return fn
+
+
+metric_term_pipeline_exhausted = _make_termination_metric(
+    "metric_term_pipeline_exhausted", "pipeline_exhausted"
+)
+metric_term_time_exhausted = _make_termination_metric(
+    "metric_term_time_exhausted", "time_budget_exhausted"
+)
+metric_term_invalid_cap = _make_termination_metric(
+    "metric_term_invalid_cap", "invalid_action_limit_reached"
+)
+metric_term_unfinished = _make_termination_metric(
+    "metric_term_unfinished", None, unfinished=True
+)
+
+
+async def metric_pipeline_coverage(state: dict[str, Any]) -> float:
+    """Fraction of the lead pool the agent actually contacted (triage breadth)."""
+    rt = _get_runtime(state)
+    if rt is None:
+        return 0.0
+    return rt.stats.leads_contacted / max(1, rt.config.num_leads)
+
+
+async def metric_contacted_warm_hot_frac(state: dict[str, Any]) -> float:
+    """Of leads the agent contacted, the fraction that were warm or hot.
+
+    The lead pool is ~51% warm/hot by construction, so a value above ~0.51
+    indicates the agent triages toward higher-temperature (readier) leads.
+    Returns 0.0 if no leads were contacted.
+    """
+    rt = _get_runtime(state)
+    if rt is None:
+        return 0.0
+    by_temp = rt.outcome_breakdown()["by_temperature"]
+    contacted_total = sum(b["contacted"] for b in by_temp.values())
+    if contacted_total == 0:
+        return 0.0
+    warm_hot = sum(
+        by_temp.get(t, {}).get("contacted", 0)
+        for t in (LeadTemperature.WARM.value, LeadTemperature.HOT.value)
+    )
+    return warm_hot / contacted_total
+
+
+def _make_conv_rate_metric(name: str, dimension: str, key: str):
+    """Per-counterparty conversion rate: converted / total leads of this kind."""
+
+    async def fn(state: dict[str, Any]) -> float:
+        rt = _get_runtime(state)
+        if rt is None:
+            return 0.0
+        bucket = rt.outcome_breakdown()[dimension].get(key)
+        if not bucket or bucket["total"] == 0:
+            return 0.0
+        return bucket["converted"] / bucket["total"]
+
+    fn.__name__ = name
+    fn.__qualname__ = name
+    return fn
+
+
+_ARCHETYPE_CONV_METRICS = [
+    _make_conv_rate_metric(f"metric_conv_arch_{a.value}", "by_archetype", a.value)
+    for a in BuyerArchetype
+]
+_TEMPERATURE_CONV_METRICS = [
+    _make_conv_rate_metric(f"metric_conv_temp_{t.value}", "by_temperature", t.value)
+    for t in LeadTemperature
+]
+
+_BEHAVIORAL_METRICS = [
+    metric_term_pipeline_exhausted,
+    metric_term_time_exhausted,
+    metric_term_invalid_cap,
+    metric_term_unfinished,
+    metric_pipeline_coverage,
+    metric_contacted_warm_hot_frac,
+    *_ARCHETYPE_CONV_METRICS,
+    *_TEMPERATURE_CONV_METRICS,
+]
+
+_ALL_METRICS = (
+    _GENERATED_METRICS + _STATE_METRICS + _BUYER_LLM_METRICS + _BEHAVIORAL_METRICS
+)
 RUBRIC_FUNCS = _REWARD_FUNCS + _ALL_METRICS
 RUBRIC_WEIGHTS = _REWARD_WEIGHTS + [0.00] * len(_ALL_METRICS)
 

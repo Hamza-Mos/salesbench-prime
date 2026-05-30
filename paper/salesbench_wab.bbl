@@ -1,0 +1,278 @@
+\begin{thebibliography}{30}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Backlund \& Petersson(2025)Backlund and
+  Petersson]{backlund2025vending}
+Axel Backlund and Lukas Petersson.
+\newblock Vending-bench: A benchmark for long-term coherence of autonomous
+  agents.
+\newblock \emph{arXiv preprint arXiv:2502.15840}, 2025.
+\newblock URL \url{https://arxiv.org/abs/2502.15840}.
+
+\bibitem[Barres et~al.(2025)Barres, Dong, Ray, Si, and
+  Narasimhan]{barres2025tau2bench}
+Victor Barres, Honghua Dong, Soham Ray, Xujie Si, and Karthik Narasimhan.
+\newblock $\tau^2$-bench: Evaluating conversational agents in a dual-control
+  environment.
+\newblock \emph{arXiv preprint arXiv:2506.07982}, 2025.
+\newblock URL \url{https://arxiv.org/abs/2506.07982}.
+
+\bibitem[Bengio et~al.(2009)Bengio, Louradour, Collobert, and
+  Weston]{bengio2009curriculum}
+Yoshua Bengio, J{\'e}r{\^o}me Louradour, Ronan Collobert, and Jason Weston.
+\newblock Curriculum learning.
+\newblock In \emph{Proceedings of the 26th Annual International Conference on
+  Machine Learning (ICML)}, pp.\  41--48, 2009.
+\newblock URL \url{https://dl.acm.org/doi/10.1145/1553374.1553380}.
+
+\bibitem[Brown(2025)]{brown2025verifiers}
+William Brown.
+\newblock Verifiers: Environments for {LLM} reinforcement learning.
+\newblock \url{https://github.com/PrimeIntellect-ai/verifiers}, 2025.
+\newblock Open-source framework.
+
+\bibitem[Gao et~al.(2023)Gao, Schulman, and Hilton]{gao2023scaling}
+Leo Gao, John Schulman, and Jacob Hilton.
+\newblock Scaling laws for reward model overoptimization.
+\newblock In \emph{Proceedings of the 40th International Conference on Machine
+  Learning (ICML)}, 2023.
+\newblock URL \url{https://arxiv.org/abs/2210.10760}.
+
+\bibitem[Jimenez et~al.(2024)Jimenez, Yang, Wettig, Yao, Pei, Press, and
+  Narasimhan]{jimenez2024swebench}
+Carlos~E. Jimenez, John Yang, Alexander Wettig, Shunyu Yao, Kexin Pei, Ofir
+  Press, and Karthik Narasimhan.
+\newblock {SWE-bench}: Can language models resolve real-world {GitHub} issues?
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2310.06770}.
+
+\bibitem[Krakovna et~al.(2020)Krakovna, Uesato, Mikulik, Rahtz, Everitt, Kumar,
+  Kenton, Leike, and Legg]{krakovna2020specification}
+Victoria Krakovna, Jonathan Uesato, Vladimir Mikulik, Matthew Rahtz, Tom
+  Everitt, Ramana Kumar, Zac Kenton, Jan Leike, and Shane Legg.
+\newblock Specification gaming: The flip side of {AI} ingenuity.
+\newblock DeepMind Blog, 2020.
+\newblock URL
+  \url{https://deepmind.google/blog/specification-gaming-the-flip-side-of-ai-ingenuity/}.
+
+\bibitem[Lambert et~al.(2024)Lambert, Morrison, Pyatkin, Huang, Ivison,
+  Brahman, Miranda, Liu, Dziri, Lyu, et~al.]{lambert2024tulu3}
+Nathan Lambert, Jacob Morrison, Valentina Pyatkin, Shengyi Huang, Hamish
+  Ivison, Faeze Brahman, Lester James~V. Miranda, Alisa Liu, Nouha Dziri, Shane
+  Lyu, et~al.
+\newblock T{\"u}lu 3: Pushing frontiers in open language model post-training.
+\newblock \emph{arXiv preprint arXiv:2411.15124}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2411.15124}.
+
+\bibitem[Lewis et~al.(2017)Lewis, Yarats, Dauphin, Parikh, and
+  Batra]{lewis2017deal}
+Mike Lewis, Denis Yarats, Yann Dauphin, Devi Parikh, and Dhruv Batra.
+\newblock Deal or no deal? end-to-end learning for negotiation dialogues.
+\newblock In \emph{Proceedings of the 2017 Conference on Empirical Methods in
+  Natural Language Processing (EMNLP)}, 2017.
+\newblock URL \url{https://arxiv.org/abs/1706.05125}.
+
+\bibitem[Liu et~al.(2024{\natexlab{a}})Liu, Lin, Hewitt, Paranjape, Bevilacqua,
+  Petroni, and Liang]{liu2024lostmiddle}
+Nelson~F. Liu, Kevin Lin, John Hewitt, Ashwin Paranjape, Michele Bevilacqua,
+  Fabio Petroni, and Percy Liang.
+\newblock Lost in the middle: How language models use long contexts.
+\newblock \emph{Transactions of the Association for Computational Linguistics
+  (TACL)}, 2024{\natexlab{a}}.
+\newblock URL \url{https://arxiv.org/abs/2307.03172}.
+
+\bibitem[Liu et~al.(2024{\natexlab{b}})Liu, Yu, Zhang, Xu, Lei, Lai, Gu, Ding,
+  Men, Yang, et~al.]{liu2024agentbench}
+Xiao Liu, Hao Yu, Hanchen Zhang, Yifan Xu, Xuanyu Lei, Hanyu Lai, Yu~Gu,
+  Hangliang Ding, Kaiwen Men, Kejuan Yang, et~al.
+\newblock {AgentBench}: Evaluating {LLMs} as agents.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2024{\natexlab{b}}.
+\newblock URL \url{https://arxiv.org/abs/2308.03688}.
+
+\bibitem[Ma et~al.(2024)Ma, Zhang, Zhu, Yang, Yang, Jin, Lan, Kong, and
+  He]{ma2024agentboard}
+Chang Ma, Junlei Zhang, Zhihao Zhu, Cheng Yang, Yujiu Yang, Yaohui Jin,
+  Zhenzhong Lan, Lingpeng Kong, and Junxian He.
+\newblock {AgentBoard}: An analytical evaluation board of multi-turn {LLM}
+  agents.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS),
+  Datasets and Benchmarks Track}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2401.13178}.
+
+\bibitem[{Meta Fundamental AI Research Diplomacy Team (FAIR)} et~al.(2022){Meta
+  Fundamental AI Research Diplomacy Team (FAIR)}, Bakhtin, Brown, Dinan,
+  Farina, Flaherty, Fried, Goff, Gray, Hu, et~al.]{bakhtin2022cicero}
+{Meta Fundamental AI Research Diplomacy Team (FAIR)}, Anton Bakhtin, Noam
+  Brown, Emily Dinan, Gabriele Farina, Colin Flaherty, Daniel Fried, Andrew
+  Goff, Jonathan Gray, Hengyuan Hu, et~al.
+\newblock Human-level play in the game of {Diplomacy} by combining language
+  models with strategic reasoning.
+\newblock \emph{Science}, 378\penalty0 (6624):\penalty0 1067--1074, 2022.
+\newblock URL \url{https://www.science.org/doi/10.1126/science.ade9097}.
+
+\bibitem[Mialon et~al.(2024)Mialon, Fourrier, Swift, Wolf, LeCun, and
+  Scialom]{mialon2024gaia}
+Gr{\'e}goire Mialon, Cl{\'e}mentine Fourrier, Craig Swift, Thomas Wolf, Yann
+  LeCun, and Thomas Scialom.
+\newblock {GAIA}: A benchmark for general {AI} assistants.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2311.12983}.
+
+\bibitem[Pan et~al.(2022)Pan, Bhatia, and Steinhardt]{pan2022reward}
+Alexander Pan, Kush Bhatia, and Jacob Steinhardt.
+\newblock The effects of reward misspecification: Mapping and mitigating
+  misaligned models.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2022.
+\newblock URL \url{https://arxiv.org/abs/2201.03544}.
+
+\bibitem[Pan et~al.(2023)Pan, Chan, Zou, Li, Basart, Woodside, Zhang, Emmons,
+  and Hendrycks]{pan2023machiavelli}
+Alexander Pan, Jun~Shern Chan, Andy Zou, Nathaniel Li, Steven Basart, Thomas
+  Woodside, Hanlin Zhang, Scott Emmons, and Dan Hendrycks.
+\newblock Do the rewards justify the means? measuring trade-offs between
+  rewards and ethical behavior in the {MACHIAVELLI} benchmark.
+\newblock In \emph{Proceedings of the 40th International Conference on Machine
+  Learning (ICML)}, 2023.
+\newblock URL \url{https://arxiv.org/abs/2304.03279}.
+
+\bibitem[Pan et~al.(2024)Pan, Jones, Jagadeesan, and
+  Steinhardt]{pan2024feedback}
+Alexander Pan, Erik Jones, Meena Jagadeesan, and Jacob Steinhardt.
+\newblock Feedback loops with language models drive in-context reward hacking.
+\newblock In \emph{Proceedings of the 41st International Conference on Machine
+  Learning (ICML)}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2402.06627}.
+
+\bibitem[Park et~al.(2023)Park, O'Brien, Cai, Morris, Liang, and
+  Bernstein]{park2023generative}
+Joon~Sung Park, Joseph~C. O'Brien, Carrie~J. Cai, Meredith~Ringel Morris, Percy
+  Liang, and Michael~S. Bernstein.
+\newblock Generative agents: Interactive simulacra of human behavior.
+\newblock In \emph{Proceedings of the 36th Annual ACM Symposium on User
+  Interface Software and Technology (UIST)}, 2023.
+\newblock URL \url{https://arxiv.org/abs/2304.03442}.
+
+\bibitem[Patil et~al.(2024)Patil, Zhang, Wang, and Gonzalez]{patil2024gorilla}
+Shishir~G. Patil, Tianjun Zhang, Xin Wang, and Joseph~E. Gonzalez.
+\newblock Gorilla: Large language model connected with massive {APIs}.
+\newblock In \emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2305.15334}.
+
+\bibitem[Perez et~al.(2022)Perez, Ringer, Luko{\v{s}}i{\=u}t{\.e}, Nguyen,
+  Chen, Heiner, Pettit, Olsson, Kundu, Kadavath, et~al.]{perez2022discovering}
+Ethan Perez, Sam Ringer, Kamil{\.e} Luko{\v{s}}i{\=u}t{\.e}, Karina Nguyen,
+  Edwin Chen, Scott Heiner, Craig Pettit, Catherine Olsson, Sandipan Kundu,
+  Saurav Kadavath, et~al.
+\newblock Discovering language model behaviors with model-written evaluations.
+\newblock \emph{arXiv preprint arXiv:2212.09251}, 2022.
+\newblock URL \url{https://arxiv.org/abs/2212.09251}.
+
+\bibitem[Qin et~al.(2024)Qin, Liang, Ye, Zhu, Yan, Lu, Lin, Cong, Tang, Qian,
+  et~al.]{qin2024toolllm}
+Yujia Qin, Shihao Liang, Yining Ye, Kunlun Zhu, Lan Yan, Yaxi Lu, Yankai Lin,
+  Xin Cong, Xiangru Tang, Bill Qian, et~al.
+\newblock {ToolLLM}: Facilitating large language models to master 16000+
+  real-world {APIs}.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2307.16789}.
+
+\bibitem[Shao et~al.(2024)Shao, Wang, Zhu, Xu, Song, Bi, Zhang, Zhang, Li, Wu,
+  and Guo]{shao2024deepseekmath}
+Zhihong Shao, Peiyi Wang, Qihao Zhu, Runxin Xu, Junxiao Song, Xiao Bi, Haowei
+  Zhang, Mingchuan Zhang, Y.~K. Li, Y.~Wu, and Daya Guo.
+\newblock {DeepSeekMath}: Pushing the limits of mathematical reasoning in open
+  language models.
+\newblock \emph{arXiv preprint arXiv:2402.03300}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2402.03300}.
+
+\bibitem[Sharma et~al.(2024)Sharma, Tong, Korbak, Duvenaud, Askell, Bowman,
+  Cheng, Durmus, Hatfield-Dodds, Johnston, Kravec, Maxwell, McCandlish,
+  Ndousse, Rausch, Schiefer, Yan, Zhang, and Perez]{sharma2024sycophancy}
+Mrinank Sharma, Meg Tong, Tomasz Korbak, David Duvenaud, Amanda Askell,
+  Samuel~R. Bowman, Newton Cheng, Esin Durmus, Zac Hatfield-Dodds, Scott~R.
+  Johnston, Shauna Kravec, Timothy Maxwell, Sam McCandlish, Kamal Ndousse,
+  Oliver Rausch, Nicholas Schiefer, Da~Yan, Miranda Zhang, and Ethan Perez.
+\newblock Towards understanding sycophancy in language models.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2310.13548}.
+
+\bibitem[Skalse et~al.(2022)Skalse, Howe, Krasheninnikov, and
+  Krueger]{skalse2022reward}
+Joar Skalse, Nikolaus H.~R. Howe, Dmitrii Krasheninnikov, and David Krueger.
+\newblock Defining and characterizing reward hacking.
+\newblock In \emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}, 2022.
+\newblock URL \url{https://arxiv.org/abs/2209.13085}.
+
+\bibitem[Vezhnevets et~al.(2023)Vezhnevets, Agapiou, Aharon, Ziv, Matyas,
+  Du{\'e}{\~n}ez-Guzm{\'a}n, Cunningham, Osindero, Karmon, and
+  Leibo]{vezhnevets2023concordia}
+Alexander~Sasha Vezhnevets, John~P. Agapiou, Avia Aharon, Ron Ziv, Jayd Matyas,
+  Edgar~A. Du{\'e}{\~n}ez-Guzm{\'a}n, William~A. Cunningham, Simon Osindero,
+  Danny Karmon, and Joel~Z. Leibo.
+\newblock Generative agent-based modeling with actions grounded in physical,
+  social, or digital space using {Concordia}.
+\newblock \emph{arXiv preprint arXiv:2312.03664}, 2023.
+\newblock URL \url{https://arxiv.org/abs/2312.03664}.
+
+\bibitem[Wang et~al.(2019)Wang, Shi, Kim, Oh, Yang, Zhang, and
+  Yu]{wang2019persuasion}
+Xuewei Wang, Weiyan Shi, Richard Kim, Yoojung Oh, Sijia Yang, Jingwen Zhang,
+  and Zhou Yu.
+\newblock Persuasion for good: Towards a personalized persuasive dialogue
+  system for social good.
+\newblock In \emph{Proceedings of the 57th Annual Meeting of the Association
+  for Computational Linguistics (ACL)}, 2019.
+\newblock URL \url{https://arxiv.org/abs/1906.06725}.
+
+\bibitem[Xu et~al.(2024)Xu, Song, Li, Tang, Jain, Bao, Wang, Zhou, Guo, Cao,
+  et~al.]{xu2024theagentcompany}
+Frank~F. Xu, Yufan Song, Boxuan Li, Yuxuan Tang, Kritanjali Jain, Mengxue Bao,
+  Zora~Z. Wang, Xuhui Zhou, Zhitong Guo, Murong Cao, et~al.
+\newblock {TheAgentCompany}: Benchmarking {LLM} agents on consequential real
+  world tasks.
+\newblock \emph{arXiv preprint arXiv:2412.14161}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2412.14161}.
+
+\bibitem[Yao et~al.(2024)Yao, Shinn, Razavi, and Narasimhan]{yao2024taubench}
+Shunyu Yao, Noah Shinn, Pedram Razavi, and Karthik Narasimhan.
+\newblock $\tau$-bench: A benchmark for tool-agent-user interaction in
+  real-world domains.
+\newblock In \emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2406.12045}.
+
+\bibitem[Zhou et~al.(2024{\natexlab{a}})Zhou, Xu, Zhu, Zhou, Lo, Sridhar,
+  Cheng, Ou, Bisk, Fried, Alon, and Neubig]{zhou2024webarena}
+Shuyan Zhou, Frank~F. Xu, Hao Zhu, Xuhui Zhou, Robert Lo, Abishek Sridhar,
+  Xianyi Cheng, Tianyue Ou, Yonatan Bisk, Daniel Fried, Uri Alon, and Graham
+  Neubig.
+\newblock {WebArena}: A realistic web environment for building autonomous
+  agents.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2024{\natexlab{a}}.
+\newblock URL \url{https://arxiv.org/abs/2307.13854}.
+
+\bibitem[Zhou et~al.(2024{\natexlab{b}})Zhou, Zhu, Mathur, Zhang, Yu, Qi,
+  Morency, Bisk, Fried, Neubig, and Sap]{zhou2024sotopia}
+Xuhui Zhou, Hao Zhu, Leena Mathur, Ruohong Zhang, Haofei Yu, Zhengyang Qi,
+  Louis-Philippe Morency, Yonatan Bisk, Daniel Fried, Graham Neubig, and
+  Maarten Sap.
+\newblock {SOTOPIA}: Interactive evaluation for social intelligence in language
+  agents.
+\newblock In \emph{International Conference on Learning Representations
+  (ICLR)}, 2024{\natexlab{b}}.
+\newblock URL \url{https://arxiv.org/abs/2310.11667}.
+
+\end{thebibliography}

@@ -1003,3 +1003,118 @@ class TestBuyerMetricAccess:
         state = {"runtime": _make_runtime()}
         result = self._run(metric_buyer_llm_call_count(state))
         assert result == 0.0
+
+
+# ---------------------------------------------------------------------------
+# TestOutcomeBreakdown (NEW — per-archetype / per-temperature behavioral export)
+# ---------------------------------------------------------------------------
+
+
+class TestOutcomeBreakdown:
+    def _convert_first_lead(self, rt):
+        """Mark the first lead contacted + converted (deterministic, no LLM)."""
+        lead = list(rt.leads.values())[0]
+        lead.call_count = 1
+        lead.status = LeadStatus.CONVERTED
+        return lead
+
+    def test_breakdown_totals_match_lead_count(self):
+        rt = _make_runtime(num_leads=20)
+        bd = rt.outcome_breakdown()
+        arch_total = sum(b["total"] for b in bd["by_archetype"].values())
+        temp_total = sum(b["total"] for b in bd["by_temperature"].values())
+        assert arch_total == 20
+        assert temp_total == 20
+
+    def test_breakdown_counts_contacted_and_converted(self):
+        rt = _make_runtime(num_leads=20)
+        lead = self._convert_first_lead(rt)
+        bd = rt.outcome_breakdown()
+        arch = bd["by_archetype"][lead.archetype.value]
+        assert arch["contacted"] >= 1
+        assert arch["converted"] >= 1
+        assert arch["converted"] <= arch["contacted"] <= arch["total"]
+
+    def test_breakdown_in_export_summary(self):
+        rt = _make_runtime(num_leads=10)
+        summary = rt.export_summary()
+        assert "outcomes" in summary
+        assert "by_archetype" in summary["outcomes"]
+        assert "by_temperature" in summary["outcomes"]
+
+
+# ---------------------------------------------------------------------------
+# TestBehavioralMetrics (NEW — termination attribution, triage, conversion FP)
+# ---------------------------------------------------------------------------
+
+
+class TestBehavioralMetrics:
+    def _run(self, coro):
+        return asyncio.new_event_loop().run_until_complete(coro)
+
+    def test_termination_metrics_are_one_hot(self):
+        from rewards import (
+            metric_term_invalid_cap,
+            metric_term_pipeline_exhausted,
+            metric_term_time_exhausted,
+            metric_term_unfinished,
+        )
+
+        rt = _make_runtime()
+        rt.done = True
+        rt.termination_reason = "invalid_action_limit_reached"
+        state = {"runtime": rt}
+        assert self._run(metric_term_invalid_cap(state)) == 1.0
+        assert self._run(metric_term_pipeline_exhausted(state)) == 0.0
+        assert self._run(metric_term_time_exhausted(state)) == 0.0
+        assert self._run(metric_term_unfinished(state)) == 0.0
+
+    def test_termination_unfinished_when_not_done(self):
+        from rewards import metric_term_invalid_cap, metric_term_unfinished
+
+        rt = _make_runtime()  # not done
+        state = {"runtime": rt}
+        assert self._run(metric_term_unfinished(state)) == 1.0
+        assert self._run(metric_term_invalid_cap(state)) == 0.0
+
+    def test_pipeline_coverage(self):
+        from rewards import metric_pipeline_coverage
+
+        rt = _make_runtime(num_leads=10)
+        rt.stats.leads_contacted = 3
+        assert self._run(metric_pipeline_coverage({"runtime": rt})) == pytest.approx(0.3)
+
+    def test_conversion_rate_metric_per_archetype(self):
+        from rewards import _make_conv_rate_metric
+
+        rt = _make_runtime(num_leads=20)
+        lead = list(rt.leads.values())[0]
+        lead.call_count = 1
+        lead.status = LeadStatus.CONVERTED
+        metric = _make_conv_rate_metric(
+            "metric_conv_arch_x", "by_archetype", lead.archetype.value
+        )
+        rate = self._run(metric({"runtime": rt}))
+        bd = rt.outcome_breakdown()["by_archetype"][lead.archetype.value]
+        assert rate == pytest.approx(bd["converted"] / bd["total"])
+        assert rate > 0.0
+
+    def test_behavioral_metrics_registered_zero_weight(self):
+        from rewards import RUBRIC_FUNCS, RUBRIC_WEIGHTS, _BEHAVIORAL_METRICS
+
+        names = {f.__name__ for f in RUBRIC_FUNCS}
+        # All 6 archetype/temperature/termination metrics are registered
+        for f in _BEHAVIORAL_METRICS:
+            assert f.__name__ in names
+        # 10 archetypes + 4 temperatures + 4 termination + coverage + triage = 20
+        assert len(_BEHAVIORAL_METRICS) == 20
+        # Funcs and weights stay aligned; new metrics carry zero weight
+        assert len(RUBRIC_FUNCS) == len(RUBRIC_WEIGHTS)
+
+    def test_behavioral_metrics_do_not_change_reward_weights(self):
+        from rewards import DEFAULT_REWARD_WEIGHTS, build_rubric
+
+        _, weights = build_rubric(None)
+        # The six reward weights sum to the canonical ceiling-defining total;
+        # behavioral metrics must all be zero-weight.
+        assert sum(weights) == pytest.approx(sum(DEFAULT_REWARD_WEIGHTS.values()))
