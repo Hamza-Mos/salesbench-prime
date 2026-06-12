@@ -71,7 +71,7 @@ class SalesEpisodeRuntime:
         self._call_counter = 0
         self._callback_counter = 0
         self._contacted_leads: set[str] = set()
-        self._quoted_leads: set[str] = set()
+        self._quoted_offers: set[tuple[str, PlanType, int, int | None, float]] = set()
         self.event_log: list[str] = []
         self._pending_buyer_speech: str | None = None
 
@@ -342,7 +342,15 @@ class SalesEpisodeRuntime:
         except ValueError as exc:
             raise RuntimeActionError(str(exc)) from exc
         self._advance(self.config.tool_costs.quote_minutes, "quote_plan")
-        self._quoted_leads.add(lead_id)
+        self._quoted_offers.add(
+            self._quoted_offer_key(
+                lead_id=lead_id,
+                plan_type=plan,
+                coverage_amount=quote["coverage_amount"],
+                term_years=quote["term_years"],
+                monthly_premium=quote["monthly_premium"],
+            )
+        )
 
         affordability_ratio = quote["monthly_premium"] / max(lead.budget_monthly, 1.0)
         return {
@@ -405,12 +413,21 @@ class SalesEpisodeRuntime:
             raise RuntimeActionError("coverage_amount must be > 0")
         if not next_step:
             raise RuntimeActionError("next_step cannot be empty")
-        if self.active_call.lead_id not in self._quoted_leads:
+        plan = self._parse_plan_type(plan_type)
+        if plan == PlanType.TERM and term_years is None:
+            term_years = 20
+        quoted_offer = self._quoted_offer_key(
+            lead_id=self.active_call.lead_id,
+            plan_type=plan,
+            coverage_amount=coverage_amount,
+            term_years=term_years,
+            monthly_premium=monthly_premium,
+        )
+        if quoted_offer not in self._quoted_offers:
             raise RuntimeActionError(
-                "must quote a plan for this lead before proposing — "
+                "must quote this exact offer before proposing — "
                 "use products_quote_plan first"
             )
-        plan = self._parse_plan_type(plan_type)
         offer = Offer(
             plan_type=plan,
             coverage_amount=coverage_amount,
@@ -421,8 +438,7 @@ class SalesEpisodeRuntime:
 
         self.active_call.offers.append(offer)
         self.stats.offers_proposed += 1
-        if self.active_call.lead_id in self._quoted_leads:
-            self.stats.quoted_proposals += 1
+        self.stats.quoted_proposals += 1
         self._advance(self.config.tool_costs.propose_offer_minutes, "propose_offer")
 
         # Time may have expired during _advance, which finalizes the active
@@ -696,6 +712,23 @@ class SalesEpisodeRuntime:
         except ValueError as exc:
             valid = ", ".join(plan.value for plan in PlanType)
             raise RuntimeActionError(f"invalid plan_type '{plan_type}'. valid: {valid}") from exc
+
+    def _quoted_offer_key(
+        self,
+        *,
+        lead_id: str,
+        plan_type: PlanType,
+        coverage_amount: int,
+        term_years: int | None,
+        monthly_premium: float,
+    ) -> tuple[str, PlanType, int, int | None, float]:
+        return (
+            lead_id,
+            plan_type,
+            int(coverage_amount),
+            term_years,
+            round(float(monthly_premium), 2),
+        )
 
     def _advance(self, minutes: int, action: str) -> None:
         if minutes < 0:
